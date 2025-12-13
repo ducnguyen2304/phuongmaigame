@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>FUV Makerspace Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background:#000; opacity:0; transition:opacity 1s; overflow:hidden; }
+    canvas { display:block; }
+
+    #coords {
+      position: fixed; top: 10px; left: 10px;
+      color: white; font-family: monospace; font-size: 14px;
+      background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px;
+      z-index: 20;
+    }
+
+    #help {
+      position: fixed; bottom: 10px; left: 10px;
+      color: white; font-family: Arial, sans-serif; font-size: 13px;
+      background: rgba(0, 0, 0, 0.6); padding: 8px 10px; border-radius: 8px;
+      z-index: 20; line-height: 1.5;
+      max-width: min(520px, 92vw);
+    }
+
+    #backBtn, #soundBtn {
+      position: fixed; left: 10px;
+      padding: 10px 15px; background: rgba(0,0,0,0.7); color: white;
+      border: 2px solid white; border-radius: 8px; cursor: pointer;
+      font-size: 13px; z-index: 25; transition: background 0.3s;
+      pointer-events: auto;
+    }
+    #backBtn:hover, #soundBtn:hover { background: rgba(255,255,255,0.2); }
+    #backBtn { top: 10px; }
+    #soundBtn { top: 55px; }
+
+    /* BIG SCENE PANEL (for TA/Crowd scenes) */
+    #scenePanel {
+      position: fixed;
+      top: 40px; right: 20px;
+      width: 520px; height: 420px;
+      background: rgba(0,0,0,0.78);
+      border-radius: 18px;
+      padding: 14px;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 0 18px rgba(0,0,0,0.6);
+      z-index: 60;
+    }
+    #scenePanelTitle { font-weight: 700; font-size: 16px; }
+    #sceneText { font-size: 13px; line-height: 1.5; white-space: pre-line; }
+    #sceneImage { max-width: 100%; max-height: 240px; object-fit: contain; border-radius: 10px; }
+    #sceneHint { font-size: 12px; opacity: 0.85; }
+
+    /* UNIVERSAL OVERLAY (mini-games) */
+    #overlay {
+      position: fixed; inset: 0;
+      display: none;
+      background: rgba(0,0,0,0.85);
+      z-index: 80;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #overlayCard {
+      width: min(1100px, 98vw);
+      height: min(760px, 94vh);
+      background: rgba(15,15,15,0.97);
+      border-radius: 18px;
+      box-shadow: 0 0 22px rgba(0,0,0,0.7);
+      padding: 14px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+    #overlayTop {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #overlayTitle { font-weight: 700; font-size: 16px; }
+    #overlayClose {
+      cursor: pointer;
+      border: 0;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-weight: 700;
+    }
+    #overlayBody {
+      flex: 1;
+      background: rgba(0,0,0,0.35);
+      border-radius: 14px;
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .hint { font-size: 12px; opacity: 0.85; margin-top: 6px; }
+    .row { display:flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      cursor:pointer;
+      border:0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      font-weight: 700;
+    }
+    .btn:active { transform: translateY(1px); }
+
+    /* Wiring swatches */
+    .swatch {
+      width: 24px; height: 24px; border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.25);
+      cursor: pointer;
+    }
+
+    /* =========================================
+       COLORING GAME STYLES (PHASE 2)
+       ========================================= */
+    .paint-app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      position: relative;
+    }
+
+    .paint-screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .paint-screen.active { display: flex; }
+
+    .template-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+    .template-thumb {
+      width: 160px;
+      height: 160px;
+      background: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 4px solid transparent;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .template-thumb:hover { transform: scale(1.05); border-color: #33aaff; }
+    .template-thumb canvas { width: 100%; height: 100%; object-fit: contain; }
+
+    .paint-editor {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: 100%;
+      gap: 16px;
+    }
+    .paint-canvas-container {
+      flex: 1;
+      position: relative;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+      border: 1px solid #ddd;
+      min-height: 520px;
+    }
+    #paintCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .paint-sidebar {
+      width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 4px;
+    }
+    .paint-panel {
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .paint-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tool-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .tool-btn:hover { background: rgba(255,255,255,0.2); }
+    .tool-btn.active {
+      background: #33aaff; color: #000;
+      box-shadow: 0 2px 8px rgba(51, 170, 255, 0.4);
+    }
+
+    .palette-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .color-dot {
+      width: 100%; aspect-ratio: 1; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.2s;
+    }
+    .color-dot:hover { transform: scale(1.1); }
+    .color-dot.active { border-color: #fff; transform: scale(1.15); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+
+    .range-wrap { margin-top: 4px; }
+    input[type=range] {
+      width: 100%;
+      accent-color: #33aaff;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+    }
+
+    .btn-apply {
+      background: #33ff77; color: #000; width: 100%;
+      margin-top: auto; padding: 12px; border-radius: 8px;
+      font-weight: bold; border:0; cursor: pointer;
+    }
+    .btn-apply:hover { background: #66ff99; }
+
+    .box-container { position: relative; width: 600px; height: 400px; }
+    .box-img {
+      width: 100%; height: 100%; object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    }
+    #boxStickerCanvas {
+      position: absolute;
+      bottom: 74px;
+      left: 310px;
+      width: 250px;
+      height: 160px;
+      background: transparent;
+      transform: perspective(1000px) rotateY(-28deg) rotateX(4deg) skewY(-8deg);
+      transform-origin: center;
+      opacity: 0.92;
+      mix-blend-mode: multiply;
+      filter: brightness(0.95);
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="coords">X: 0, Y: 0</div>
+
+  <button id="backBtn" onclick="window.location.href='index.html'">← Return to Common Area</button>
+  <button id="soundBtn">🔊 Sound ON</button>
+
+  <div id="help">
+    Move: <b>W A S D</b><br>
+    Near Nick & Judy table: <b>L</b> (sound)<br>
+    Near Water table: <b>I</b> (Board Race mini-game)<br>
+    Near DST Box: <b>C</b> (Coloring mini-game)<br>
+    Near 3D Print table: <b>P</b> (Find SD card mini-game)<br>
+    Near TA: <b>T</b> (big scene / next scene)<br>
+    Near Hearty Plant: <b>H</b> (inspect)<br>
+    Near TV: <b>V</b> (watch TV)<br>
+    Near Electronics Table: <b>M</b> (wiring map)<br>
+    <span style="opacity:.85">ESC closes overlay/scene</span>
+  </div>
+
+  <div id="scenePanel">
+    <div id="scenePanelTitle">TA / Crowd Scene</div>
+    <div id="sceneText"></div>
+    <img id="sceneImage" />
+    <div id="sceneHint">Press <b>T</b> again for next scene. Press <b>ESC</b> to close.</div>
+  </div>
+
+  <div id="overlay">
+    <div id="overlayCard">
+      <div id="overlayTop">
+        <div id="overlayTitle">Mini-game</div>
+        <button id="overlayClose">ESC / Close</button>
+      </div>
+      <div id="overlayBody"></div>
+    </div>
+  </div>
+
+  <canvas id="makerspace"></canvas>
+
+  <script>
+    setTimeout(() => document.body.style.opacity = '1', 10);
+
+    const canvas = document.getElementById('makerspace');
+    const ctx = canvas.getContext('2d');
+    const coords = document.getElementById('coords');
+
+    const scenePanel = document.getElementById('scenePanel');
+    const sceneTextEl = document.getElementById('sceneText');
+    const sceneImageEl = document.getElementById('sceneImage');
+    const scenePanelTitleEl = document.getElementById('scenePanelTitle');
+
+    const overlay = document.getElementById('overlay');
+    const overlayBody = document.getElementById('overlayBody');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlayClose = document.getElementById('overlayClose');
+
+    // PDF hearty plant
+    const HEARTY_PDF = "docs/Convocation-2025-Hearty-Plant.pdf";
+
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- Assets
+    const bg = new Image();
+    const char = new Image();
+    let loaded = 0;
+    let bgLoaded = false;
+    let charLoaded = false;
+
+    function checkLoaded() { loaded++; if (loaded === 2) loop(); }
+    bg.onload = () => { bgLoaded = true; checkLoaded(); };
+    bg.onerror = () => { console.warn("BG missing"); checkLoaded(); };
+    char.onload = () => { charLoaded = true; checkLoaded(); };
+    char.onerror = () => { console.warn("Char missing"); checkLoaded(); };
+
+    bg.src = '/background/Makerspace.png';
+    char.src = '/character/char.png';
+
+    const MAP_W = 1536;
+    const MAP_H = 1024;
+
+    // --- Player
+    const player = { x: 200, y: 600, w: 45, h: 70, speed: 5 };
+    const keys = {};
+
+    const DEBUG_ZONES = false; // true = hiện khung đỏ/xanh, false = ẩn
+
+
+    // --- Audio
+    const bgMakerspace = new Audio('sound/makerspace.mp3');
+    bgMakerspace.loop = true;
+    bgMakerspace.volume = 0.55;
+
+    const zootopiaSound = new Audio('sound/zootopia.mp3');
+    let bgStarted = false;
+    let isSoundEnabled = true;
+
+    const crowdSound = new Audio('sound/crowd.mp3');
+    let isDramaPlaying = false;
+
+    function startBGIfNeeded() {
+      if (!bgStarted && isSoundEnabled) {
+        bgStarted = true;
+        bgMakerspace.play().catch(() => {});
+      }
+    }
+
+    function pauseBGfor(sound) {
+      if (!bgStarted) return;
+      bgMakerspace.pause();
+      sound.onended = () => {
+        if (isSoundEnabled) bgMakerspace.play().catch(() => {});
+      };
+    }
+
+    // Sound toggle button
+    const soundBtn = document.getElementById('soundBtn');
+    soundBtn.addEventListener('click', () => {
+      isSoundEnabled = !isSoundEnabled;
+      if (isSoundEnabled) {
+        soundBtn.textContent = '🔊 Sound ON';
+        if (bgStarted) bgMakerspace.play().catch(() => {});
+      } else {
+        soundBtn.textContent = '🔇 Sound OFF';
+        bgMakerspace.pause();
+        crowdSound.pause();
+        zootopiaSound.pause();
+      }
+    });
+
+    // --- Scenes
+    const scenes = [
+      { text: "...", img: "scenes/scene1.png" },
+      { text: "...", img: "scenes/scene2.png" },
+      { text: "...", img: "scenes/scene3.png" },
+      { text: "...", img: "scenes/scene4.png" },
+      { text: "...", img: "scenes/scene5.png" },
+      { text: "...", img: "scenes/scene6.png" },
+      { text: "...", img: "scenes/scene7.png" }
+    ];
+    let currentSceneIndex = 0;
+
+    function openOrAdvanceScene() {
+      // 1. Play sound logic (stops BG momentarily to focus on crowd noise)
+      startBGIfNeeded();
+      pauseBGfor(crowdSound);
+      isDramaPlaying = true;
+      crowdSound.currentTime = 0;
+      crowdSound.play().catch(() => {});
+      // 2. Open Fullscreen Overlay
+      openOverlay("☕ The Drama (Tea Time)", () => {
+        // We define a helper to render the current scene content inside the overlay
+        const render = () => {
+          const scene = scenes[currentSceneIndex];
+          
+          overlayBody.innerHTML = `
+            <div style="
+              display:flex; 
+              flex-direction:column; 
+              align-items:center; 
+              justify-content:center; 
+              height:100%; 
+              width:100%; 
+              text-align:center;
+            ">
+              <!-- Large Scene Image -->
+              <div style="flex:1; display:flex; align-items:center; justify-content:center; width:100%; overflow:hidden; min-height:0;">
+                <img src="${scene.img}" 
+                     style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 0 25px rgba(0,0,0,0.6);"
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color:#666\\'>Image missing: ${scene.img}</div>'" 
+                />
+              </div>
+              <!-- Text & Controls -->
+              <div style="margin-top:20px; width:100%; max-width:900px;">
+                <div style="
+                  font-size:22px; 
+                  line-height:1.5; 
+                  color:#fff; 
+                  margin-bottom:24px; 
+                  text-shadow:0 2px 4px rgba(0,0,0,0.8);
+                  background:rgba(0,0,0,0.4);
+                  padding:16px;
+                  border-radius:12px;
+                ">
+                  ${scene.text || "..."}
+                </div>
+                <div class="row" style="justify-content:center; gap:20px;">
+                  <div style="font-size:14px; opacity:0.6; align-self:center;">
+                    Scene ${currentSceneIndex + 1} / ${scenes.length}
+                  </div>
+                  <button class="btn" id="btnNextDrama" style="
+                    background:#ffcc33; 
+                    color:#000; 
+                    font-size:18px; 
+                    padding:14px 32px;
+                    border:2px solid #fff;
+                  ">
+                    Next Drama ➡️
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+          // Handle "Next" click
+          const btn = overlayBody.querySelector("#btnNextDrama");
+          btn.onclick = () => {
+            currentSceneIndex = (currentSceneIndex + 1) % scenes.length;
+            render(); // Re-render with new index
+            // Optional: Replay sound on next slide
+            crowdSound.currentTime = 0;
+            crowdSound.play().catch(()=>{});
+          };
+        };
+        // Initial render
+        render();
+      });
+    }
+
+    // ============================================================
+    //  ZONES (x,y,w,h) in ORIGINAL MAP COORDS
+    // ============================================================
+    const zones = {
+      TA: { x: 450, y: 200, w: 146, h: 210 },
+      Right_Row: { x: 920, y: 200, w: 138, h: 320 },
+      Nick_Judy_Table: { x: 920, y: 550, w: 136, h: 99 },
+      Left_Table: { x: 660, y: 200, w: 135, h: 445 },
+      TV: { x: 890, y: 750, w: 193, h: 100 },
+      Chu_Thai: { x: 1018, y: 564, w: 154, h: 100 },
+      DST_Box: { x: 500, y: 500, w: 79, h: 380 },
+      Sewing_Machine: { x: 466, y: 721, w: 93, h: 51 },
+      Electronics_Table: { x: 620, y: 870, w: 540, h: 95 },
+      Print3D_Table: { x: 1150, y: 190, w: 77, h: 480 },
+      Water_Table: { x: 750, y: 70, w: 230, h: 47 },
+      Hearty_Plant: { x: 200, y: 520, w: 141, h: 67 }
+    };
+
+    function scaleRect(r) {
+      const sx = canvas.width / MAP_W;
+      const sy = canvas.height / MAP_H;
+      return { x: r.x * sx, y: r.y * sy, w: r.w * sx, h: r.h * sy };
+    }
+
+    function getScaledZones() {
+      const out = {};
+      for (const [name, r] of Object.entries(zones)) out[name] = scaleRect(r);
+      return out;
+    }
+
+    function getObstacles() {
+      const Z = getScaledZones();
+      return [ Z.DST_Box, Z.Print3D_Table, Z.Electronics_Table, Z.Right_Row, Z.Left_Table ];
+    }
+
+    // --- Overlay controls
+    let overlayOpen = false;
+
+    overlayClose.addEventListener('click', closeOverlay);
+
+    function openOverlay(title, htmlBuilderFn) {
+      overlayOpen = true;
+      overlay.style.display = "flex";
+      overlayTitle.textContent = title;
+      overlayBody.innerHTML = "";
+      htmlBuilderFn();
+    }
+
+    function closeOverlay() {
+      overlayOpen = false;
+      overlay.style.display = "none";
+      overlayBody.innerHTML = "";
+      
+      // Stop crowd sound if drama was playing
+      if (isDramaPlaying) {
+        crowdSound.pause();
+        crowdSound.currentTime = 0;
+        isDramaPlaying = false;
+        // Resume background music if sound is enabled
+        if (bgStarted && isSoundEnabled) bgMakerspace.play().catch(() => {});
+      }
+    }
+
+    // BIG PDF VIEWER for Hearty Plant
+    function openHeartyPDF() {
+      openOverlay("Hearty Plant — Info", () => {
+        overlayBody.innerHTML = `
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+            <div style="flex: 1; min-width: 360px;">
+              <div style="font-size:13px; line-height:1.6; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px;">
+                <div style="font-size:15px; font-weight:800; margin-bottom:8px;">Quick Summary</div>
+                <div style="opacity:.95;">
+                  <b>Hearty Plant</b> is a <b>vertical farming system using precision agriculture</b>.<br>
+                  Uses <b>Nutrient Film Technique (NFT)</b> hydroponics, with <b>automated control</b> of
+                  lighting, temperature, humidity, CO₂, and nutrients.<br>
+                  Has <b>real-time online monitoring</b> + <b>AI-enabled analytics</b> (leaf segmentation) to
+                  diagnose growth/yield and optimize conditions. :contentReference[oaicite:0]{index=0}
+                </div>
+                <div style="margin-top:10px; opacity:.95;">
+                  <b>Key features:</b> Modular design, IoT system, environment control, AI control strategy,
+                  hydroponic vertical farm, collaborative control. :contentReference[oaicite:1]{index=1}
+                </div>
+                <div style="margin-top:10px; opacity:.95;">
+                  <b>Approx. size:</b> <b>1.5 m</b> (L) × <b>0.7 m</b> (W) × <b>1.8 m</b> (H). :contentReference[oaicite:2]{index=2}
+                </div>
+
+                <div class="row" style="margin-top:12px;">
+                  <button class="btn" id="openPdfNewTab">Open PDF in new tab</button>
+                </div>
+                <div class="hint" style="margin-top:8px;">
+                  Tip: If the PDF doesn't show (some browsers block embedding), use “Open PDF in new tab”.
+                </div>
+              </div>
+            </div>
+
+            <div style="flex: 2; min-width: 520px;">
+              <div style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.10); border-radius:12px; overflow:hidden;">
+                <iframe
+                  src="${HEARTY_PDF}#view=FitH"
+                  style="width:100%; height: min(72vh, 620px); border:0; display:block;"
+                  title="Hearty Plant PDF">
+                </iframe>
+              </div>
+            </div>
+          </div>
+        `;
+
+        overlayBody.querySelector("#openPdfNewTab").onclick = () => {
+          window.open(HEARTY_PDF, "_blank");
+        };
+      });
+    }
+
+    // Interaction zones
+    function getInteractions() {
+      const Z = getScaledZones();
+      return [
+        {
+          name: "Nick & Judy Table",
+          rect: Z.Nick_Judy_Table,
+          triggerDistance: 160,
+          key: "l",
+          prompt: "Press L so that they kiss",
+          onTrigger: () => {
+            startBGIfNeeded();
+            pauseBGfor(zootopiaSound);
+            zootopiaSound.currentTime = 0;
+            zootopiaSound.play().catch(() => {});
+          }
+        },
+        {
+          name: "Hearty Plant",
+          rect: Z.Hearty_Plant,
+          triggerDistance: 170,
+          key: "h",
+          prompt: "Press H water the plant",
+          onTrigger: () => openHeartyPDF()
+        },
+
+        {
+          name: "TV",
+          rect: Z.TV,
+          triggerDistance: 200,
+          key: "v",
+          prompt: "Press V to turn on the TV",
+          onTrigger: () => {
+            openOverlay("Innovation Bootcamp Info", () => {
+              overlayBody.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
+                  <img src="game/tv_poster.png" 
+                       style="max-height:500px; max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.5);" 
+                       onerror="this.style.display='none'; this.parentElement.innerHTML+='<br>Missing poster image (game/tv_poster.png)'" 
+                  />
+                  
+                  <div style="font-size:14px; margin-top:4px; max-width:600px; line-height:1.5;">
+                    <b>The Arts of Hospitality</b><br>
+                    Join us to connect with hospitality businesses and create long-term social impact.
+                  </div>
+
+                  <a href="https://forms.cloud.microsoft/pages/responsepage.aspx?id=X0Jj7nKvWEqC5-RRzJJkahRskQWUBXxLudq9d-N7x49UN0NZVlNBWUhPWjBEVU1MWjVTNUtKV1QyQi4u&origin=QRCode&qrcodeorigin=presentation&route=shorturl" 
+                     target="_blank" 
+                     class="btn" 
+                     style="text-decoration:none; background:#33aaff; color:#000; padding:12px 24px; font-size:15px; font-weight:bold; display:inline-block;">
+                     👉 Register Now
+                  </a>
+                  
+                  <div class="hint">Press ESC to close</div>
+                </div>
+              `;
+            });
+          }
+        },
+
+        {
+          name: "Electronics Table",
+          rect: Z.Electronics_Table,
+          triggerDistance: 260,
+          key: "m",
+          prompt: "Press M or everything explodes",
+          onTrigger: () => openWiringMap()
+        },
+        {
+          name: "Water Table",
+          rect: Z.Water_Table,
+          triggerDistance: 220,
+          key: "i",
+          prompt: "Press I to pass Sink or Swim!",
+          onTrigger: () => openBoardRace()
+        },
+        {
+          name: "DST Box",
+          rect: Z.DST_Box,
+          triggerDistance: 220,
+          key: "c",
+          prompt: "Press C to do assignment!",
+          onTrigger: () => openPuzzle()
+        },
+        {
+          name: "3D Print Table",
+          rect: Z.Print3D_Table,
+          triggerDistance: 240,
+          key: "p",
+          prompt: "Press P find SD card!",
+          onTrigger: () => openFindSD()
+        },
+        {
+          name: "TA",
+          rect: Z.TA,
+          triggerDistance: 220,
+          key: "t",
+          prompt: "Press T to see the tea!",
+          onTrigger: () => openOrAdvanceScene()
+        }
+      ];
+    }
+
+    let nearInteraction = null;
+
+    function computeNearInteraction() {
+      const pcx = player.x + player.w / 2;
+      const pcy = player.y + player.h / 2;
+
+      nearInteraction = null;
+      for (const it of getInteractions()) {
+        const cx = it.rect.x + it.rect.w/2;
+        const cy = it.rect.y + it.rect.h/2;
+        const dist = Math.hypot(pcx - cx, pcy - cy);
+        if (dist < it.triggerDistance) { nearInteraction = it; break; }
+      }
+    }
+
+    // Input
+    document.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      keys[k] = true;
+
+      startBGIfNeeded();
+
+      if (k === "escape") {
+        if (overlayOpen) closeOverlay();
+        else closeScenePanel();
+        return;
+      }
+
+      computeNearInteraction();
+      if (overlayOpen) return;
+
+      if (nearInteraction && k === nearInteraction.key) nearInteraction.onTrigger();
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+    });
+    document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+    // --- Collision detection
+    function collides(px, py) {
+      if (px < 0 || py < 0 || px + player.w > canvas.width || py + player.h > canvas.height) return true;
+
+      for (const o of getObstacles()) {
+        if (px + player.w > o.x && px < o.x + o.w && py + player.h > o.y && py < o.y + o.h) return true;
+      }
+      return false;
+    }
+
+    // =========================
+    // MINI-GAME 1: BOARD RACE
+    // =========================
+    function openBoardRace() {
+      // 1. Assets for the race
+      const boatImg = new Image(); boatImg.src = 'game/race/boat_player.png';
+      const rockImg = new Image(); rockImg.src = 'game/race/obstacle_rock.png';
+      const waterBg = new Image(); waterBg.src = 'game/race/water_texture.png';
+
+      openOverlay("Sink or Swim Race", () => {
+        overlayBody.innerHTML = `
+          <div style="font-size:13px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+             <div>
+               <b>Avoid the rocks!</b><br>
+               Controls: <b>← →</b> to steer, <b>Space</b> to boost.<br>
+             </div>
+             <div style="text-align:right;">
+               <span id="raceScore" style="font-weight:bold; color:#33aaff; font-size:16px;">Distance: 0m</span>
+             </div>
+          </div>
+          <canvas id="raceCanvas" width="800" height="450" style="width:100%; height:450px; border-radius:12px; display:block; box-shadow:0 4px 12px rgba(0,0,0,0.5);"></canvas>
+          <div class="hint" style="text-align:center; margin-top:8px;">Survive for 500m to win!</div>
+        `;
+
+        const cvs = overlayBody.querySelector("#raceCanvas");
+        const ctx = cvs.getContext("2d");
+        
+        // Game State
+        const state = {
+          x: 400, y: 360,
+          w: 40, h: 60,  // Hitbox size (smaller than image visual)
+          vx: 0,
+          speed: 4,      // Base scrolling speed
+          boost: 0,
+          score: 0,
+          crashes: 0,
+          finished: false,
+          obstacles: [],
+          bgScrollY: 0
+        };
+
+        const keys = { left:false, right:false, space:false };
+
+        // Events inside overlay
+        function onKey(e, active) {
+          if (!overlayOpen) return;
+          if (e.code === "ArrowLeft") keys.left = active;
+          if (e.code === "ArrowRight") keys.right = active;
+          if (e.code === "Space") keys.space = active;
+        }
+        
+        const kd = (e) => onKey(e, true);
+        const ku = (e) => onKey(e, false);
+        window.addEventListener("keydown", kd);
+        window.addEventListener("keyup", ku);
+
+        // Helper: Spawn obstacles
+        function spawnObstacle() {
+          const lane = Math.random() * (cvs.width - 80) + 40;
+          state.obstacles.push({ x: lane, y: -60, w: 45, h: 45 }); // Rock hitbox
+        }
+
+        function loopRace() {
+          if (!overlayOpen) {
+             window.removeEventListener("keydown", kd);
+             window.removeEventListener("keyup", ku);
+             return;
+          }
+          if (state.finished) return;
+
+          // 1. Logic
+          // Steering (Smooth inertia)
+          if (keys.left) state.vx -= 0.6;
+          else if (keys.right) state.vx += 0.6;
+          else state.vx *= 0.9; // Friction
+
+          state.vx = Math.max(-8, Math.min(8, state.vx)); // Cap speed
+          state.x += state.vx;
+
+          // Boundaries
+          if (state.x < 20) { state.x = 20; state.vx = 0; }
+          if (state.x > cvs.width - 20) { state.x = cvs.width - 20; state.vx = 0; }
+
+          // Boost & Scroll Speed
+          let currentSpeed = state.speed;
+          if (keys.space) {
+              currentSpeed += 3; // Boost speed
+              // Add simple "wake" effect or particles here if desired
+          }
+          state.bgScrollY += currentSpeed;
+          state.score += currentSpeed / 20; // Distance simulation
+
+          // Spawn logic
+          if (Math.random() < 0.03) spawnObstacle();
+
+          // Move Obstacles
+          for (let i = state.obstacles.length - 1; i >= 0; i--) {
+            let o = state.obstacles[i];
+            o.y += currentSpeed;
+
+            // Collision Check (Circle-ish vs Circle-ish approximation)
+            let dx = (state.x) - (o.x + o.w/2);
+            let dy = (state.y) - (o.y + o.h/2);
+            let dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < (state.w/2 + o.w/2 - 5)) { // Hit!
+               state.crashes++;
+               state.obstacles.splice(i, 1);
+               // Simple shake effect
+               cvs.style.transform = `translateX(${Math.random()*10-5}px)`;
+               setTimeout(() => cvs.style.transform = "none", 50);
+
+               if (state.crashes >= 3) {
+                 gameOver(false);
+                 return;
+               }
+            } else if (o.y > cvs.height + 50) {
+               state.obstacles.splice(i, 1);
+            }
+          }
+
+          // Win Condition
+          if (state.score >= 500) {
+            gameOver(true);
+            return;
+          }
+
+          // 2. Draw
+          // Draw Repeating Water Background
+          ctx.clearRect(0,0, cvs.width, cvs.height);
+          
+          if (waterBg.complete) {
+            const ptrn = ctx.createPattern(waterBg, 'repeat');
+            ctx.fillStyle = ptrn;
+            
+            // Shift pattern matrix
+            const matrix = new DOMMatrix();
+            matrix.translateSelf(0, state.bgScrollY % 512); // Assuming 256 or 512 tile
+            ptrn.setTransform(matrix);
+            
+            ctx.fillRect(0, 0, cvs.width, cvs.height);
+          } else {
+             ctx.fillStyle = "#0066aa"; 
+             ctx.fillRect(0,0, cvs.width, cvs.height);
+          }
+
+          // Draw Obstacles
+          state.obstacles.forEach(o => {
+            if (rockImg.complete && rockImg.naturalWidth > 0) {
+              ctx.drawImage(rockImg, o.x, o.y, 60, 60); // Visual slightly larger than hitbox
+            } else {
+              ctx.fillStyle = "#654321";
+              ctx.beginPath();
+              ctx.arc(o.x + o.w/2, o.y + o.h/2, o.w/2, 0, Math.PI*2);
+              ctx.fill();
+            }
+          });
+
+          // Draw Player Boat (centered on state.x, state.y)
+          // Save context to rotate boat slightly based on vx
+          ctx.save();
+          ctx.translate(state.x, state.y);
+          ctx.rotate(state.vx * 0.05); // Tilt
+          if (boatImg.complete && boatImg.naturalWidth > 0) {
+             // Draw centered
+             ctx.drawImage(boatImg, -32, -48, 64, 96);
+          } else {
+             // Fallback graphic
+             ctx.fillStyle = "#ffaa00";
+             ctx.beginPath();
+             ctx.moveTo(0, -30);
+             ctx.lineTo(20, 20);
+             ctx.lineTo(-20, 20);
+             ctx.fill();
+          }
+          ctx.restore();
+
+          // UI Overlay
+          const distInt = Math.floor(state.score);
+          document.getElementById('raceScore').innerText = `Distance: ${distInt}m / 500m`;
+          
+          // Life hearts
+          const lives = 3 - state.crashes;
+          ctx.fillStyle = "#ff4444";
+          for(let i=0; i<lives; i++) {
+             ctx.beginPath();
+             ctx.arc(30 + i*25, 30, 8, 0, Math.PI*2);
+             ctx.fill();
+          }
+
+          requestAnimationFrame(loopRace);
+        }
+
+        function gameOver(win) {
+          state.finished = true;
+          ctx.fillStyle = "rgba(0,0,0,0.7)";
+          ctx.fillRect(0,0,cvs.width, cvs.height);
+          
+          ctx.fillStyle = "#fff";
+          ctx.textAlign = "center";
+          
+          if (win) {
+             ctx.font = "bold 40px Arial";
+             ctx.fillStyle = "#44ff88";
+             ctx.fillText("COURSE COMPLETE!", cvs.width/2, cvs.height/2 - 20);
+             ctx.font = "20px Arial";
+             ctx.fillStyle = "#fff";
+             ctx.fillText("SWIMMMMM!", cvs.width/2, cvs.height/2 + 20);
+          } else {
+             ctx.font = "bold 40px Arial";
+             ctx.fillStyle = "#ff4444";
+             ctx.fillText("CRASHED! SINKING", cvs.width/2, cvs.height/2 - 20);
+             ctx.font = "20px Arial";
+             ctx.fillStyle = "#fff";
+             ctx.fillText("Your boat needs repairs...", cvs.width/2, cvs.height/2 + 20);
+          }
+
+          ctx.font = "14px Arial";
+          ctx.fillStyle = "#aaa";
+          ctx.fillText("Press ESC to close", cvs.width/2, cvs.height - 40);
+        }
+
+        // Start
+        requestAnimationFrame(loopRace);
+      });
+    }
+
+
+
+    // =========================
+    // MINI-GAME 2: SLIDING PUZZLE
+    // =========================
+        // =========================
+    // MINI-GAME 2: SLIDING PUZZLE
+    // =========================
+    function openPuzzle() {
+      // Inject Styles for Puzzle
+      if (!document.getElementById('puzzle-game-style')) {
+        const style = document.createElement('style');
+        style.id = 'puzzle-game-style';
+        style.textContent = `
+          .puzzle-area {
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+          }
+          .puzzle-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            background: #222;
+            border: 4px solid #555;
+            width: 450px; height: 300px; /* Adjust based on your design_full.png aspect ratio */
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+          }
+          .tile {
+            width: 100%; height: 100%;
+            background-size: 450px 300px; /* Must match board size */
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+          }
+          .tile.empty { background: #151515 !important; cursor: default; box-shadow: inset 0 0 10px #000; }
+          .win-screen { text-align: center; animation: fadeIn 0.5s; width: 100%; }
+          @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+        `;
+        document.head.appendChild(style);
+      }
+
+      openOverlay("DST Box Puzzle", () => {
+        // --- ASSETS CONFIG ---
+        const PUZZLE_SRC = "game/puzzle/design_full.png";   // Image for tiles
+        const RESULT_SRC = "game/puzzle/completed_box.png"; // Result image
+
+        overlayBody.innerHTML = `
+          <div class="puzzle-area" id="puzzleGame">
+            <div style="text-align:center;">
+              <div style="font-size:16px; font-weight:bold; margin-bottom:4px;">Fix the Design Glitch!</div>
+              <div class="hint">Click tiles to slide them into the empty spot.</div>
+            </div>
+            
+            <div class="puzzle-board" id="board"></div>
+            
+            <button class="btn" id="solveCheat" style="background:#333; font-size:10px; padding:4px 8px; opacity:0.5;">(Dev: Solve)</button>
+          </div>
+        `;
+
+        const boardEl = overlayBody.querySelector("#board");
+        const rows = 3; 
+        const cols = 3;
+        let tiles = [];
+
+        function getSolvedState() {
+           return Array.from({length: rows*cols}, (_, i) => i);
+        }
+
+        function initGame() {
+          let arr = getSolvedState();
+          // Shuffle
+          let emptyIdx = rows * cols - 1; // Last one starts empty
+          let lastMove = -1;
+          
+          for(let i=0; i<40; i++) {
+            const neighbors = getNeighbors(emptyIdx);
+            const candidates = neighbors.filter(n => n !== lastMove);
+            if (candidates.length === 0) continue;
+            const move = candidates[Math.floor(Math.random() * candidates.length)];
+            
+            [arr[emptyIdx], arr[move]] = [arr[move], arr[emptyIdx]];
+            lastMove = emptyIdx;
+            emptyIdx = move;
+          }
+          
+          tiles = arr;
+          render();
+        }
+
+        function getNeighbors(idx) {
+           const r = Math.floor(idx / cols);
+           const c = idx % cols;
+           const result = [];
+           if (r > 0) result.push(idx - cols); // top
+           if (r < rows-1) result.push(idx + cols); // bottom
+           if (c > 0) result.push(idx - 1); // left
+           if (c < cols-1) result.push(idx + 1); // right
+           return result;
+        }
+
+        function render() {
+          boardEl.innerHTML = "";
+          const isWin = checkWin();
+
+          if (isWin) {
+             showWin();
+             return;
+          }
+
+          const emptyVal = rows*cols - 1;
+
+          tiles.forEach((val, idx) => {
+            const tile = document.createElement("div");
+            tile.className = "tile";
+            
+            if (val === emptyVal) { 
+               tile.classList.add("empty");
+            } else {
+               const r = Math.floor(val / cols);
+               const c = val % cols;
+               const w = 150; // 450 / 3
+               const h = 100; // 300 / 3
+               
+               tile.style.backgroundImage = `url('${PUZZLE_SRC}')`;
+               tile.style.backgroundPosition = `-${c * w}px -${r * h}px`; 
+               tile.onclick = () => handleMove(idx);
+            }
+            boardEl.appendChild(tile);
+          });
+        }
+
+        function handleMove(idx) {
+           const emptyVal = rows*cols - 1;
+           const emptyIdx = tiles.indexOf(emptyVal);
+           const neighbors = getNeighbors(emptyIdx);
+           if (neighbors.includes(idx)) {
+              [tiles[emptyIdx], tiles[idx]] = [tiles[idx], tiles[emptyIdx]];
+              render();
+           }
+        }
+
+        function checkWin() {
+           for(let i=0; i<tiles.length; i++) {
+              if (tiles[i] !== i) return false;
+           }
+           return true;
+        }
+
+        function showWin() {
+          overlayBody.innerHTML = `
+             <div class="win-screen">
+                <div style="font-size:24px; color:#33ff77; margin-bottom:10px;">✨ PRINTED!</div>
+                <div class="hint" style="margin-bottom:20px;">Your custom toolbox is ready.</div>
+                
+                <img src="${RESULT_SRC}" style="width:500px; max-width:100%; border-radius:12px; box-shadow:0 0 20px rgba(255,255,255,0.2);" />
+
+                <div style="margin-top:24px;">
+                   <button class="btn" style="background:#fff; color:#000; font-weight:bold; padding:12px 24px;" onclick="closeOverlay()">Collect & Close</button>
+                </div>
+             </div>
+          `;
+        }
+        
+        overlayBody.querySelector('#solveCheat').onclick = () => {
+           tiles = getSolvedState();
+           render();
+        };
+
+        initGame();
+      });
+    }
+    // =========================
+    // MINI-GAME 3: MEMORY MATCH (FIND SD CARD) - Compact Version
+    // =========================
+    function openFindSD() {
+      // 1. Inject CSS styles for the memory game if not already present
+      if (!document.getElementById('memory-game-style')) {
+        const style = document.createElement('style');
+        style.id = 'memory-game-style';
+        style.textContent = `
+          .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-width: 380px; /* Significantly reduced to fit height */
+            margin: 0 auto;
+            perspective: 1000px;
+          }
+          .mem-card {
+            aspect-ratio: 3/4;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s, opacity 0.3s;
+            cursor: pointer;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+          }
+          .mem-card.flipped { transform: rotateY(180deg); }
+          .mem-card.matched { visibility: hidden; opacity: 0; pointer-events: none; }
+          .mem-card .face {
+            position: absolute; inset: 0;
+            backface-visibility: hidden;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            background: #2a2a2a; border: 1px solid #555;
+          }
+          .mem-card .front { transform: rotateY(180deg); background: #f0f0f0; }
+          .mem-card .back { background: #1a1a1a;
+            background-image: url('game/memory/card_back.png');
+            background-size: cover; background-position: center;
+          }
+          .mem-card img { width: 85%; height: 85%; object-fit: contain; }
+        `;
+        document.head.appendChild(style);
+      }
+
+      openOverlay("💾 Find the SD Card (Memory Match)", () => {
+        overlayBody.innerHTML = `
+          <div style="font-size:13px; margin-bottom:10px; text-align:center;">
+             Find the pair of <b>SD Cards</b>!<br>
+             <span class="hint" id="memStatus">Flips: 0</span>
+          </div>
+          <div class="memory-grid" id="memoryGrid"></div>
+        `;
+
+        const grid = overlayBody.querySelector("#memoryGrid");
+        const status = overlayBody.querySelector("#memStatus");
+
+        // --- Game Setup ---
+        const items = ['sd', '0', '1', '2', '3', '4', '5', '6'];
+        let deck = [...items, ...items];
+
+        // Shuffle
+        for (let i = deck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+
+        let flippedCards = [];
+        let lockBoard = false;
+        let flips = 0;
+
+        deck.forEach((item, index) => {
+          const card = document.createElement('div');
+          card.classList.add('mem-card');
+          card.dataset.name = item;
+          card.dataset.index = index;
+
+          const frontImg = item === 'sd' ? 'game/memory/item_sd.png' : `game/memory/item_${item}.png`;
+          // Note: using direct src here slightly differs from previous CSS background approach for back, 
+          // but ensures front images are sized correctly by the img tag style.
+          
+          card.innerHTML = `
+            <div class="face back">
+               <!-- Auto-generated pattern if image missing -->
+               <div style="font-size:20px; opacity:0.1;">?</div>
+            </div>
+            <div class="face front">
+               <img src="${frontImg}" alt="${item}" onerror="this.src='';this.style.backgroundColor='#ccc'" />
+            </div>
+          `;
+
+          card.addEventListener('click', () => flipCard(card));
+          grid.appendChild(card);
+        });
+
+        function flipCard(card) {
+          if (lockBoard) return;
+          if (card === flippedCards[0]) return;
+          if (card.classList.contains('matched')) return;
+
+          card.classList.add('flipped');
+          flippedCards.push(card);
+
+          if (flippedCards.length === 2) {
+            flips++;
+            status.textContent = `Flips: ${flips}`;
+            checkForMatch();
+          }
+        }
+
+        function checkForMatch() {
+          const [card1, card2] = flippedCards;
+          const isMatch = card1.dataset.name === card2.dataset.name;
+
+          if (isMatch) {
+            disableCards(card1, card2);
+          } else {
+            unflipCards();
+          }
+        }
+
+        function disableCards(c1, c2) {
+          lockBoard = true;
+          setTimeout(() => {
+            c1.classList.add('matched');
+            c2.classList.add('matched');
+
+            if (c1.dataset.name === 'sd') {
+              gameWon();
+            } else {
+              lockBoard = false;
+              resetBoard();
+            }
+          }, 500);
+        }
+
+        function unflipCards() {
+          lockBoard = true;
+          setTimeout(() => {
+            flippedCards.forEach(c => c.classList.remove('flipped'));
+            resetBoard();
+          }, 800);
+        }
+
+        function resetBoard() {
+          [lockBoard, flippedCards] = [false, []];
+        }
+
+        function gameWon() {
+           grid.innerHTML = `
+             <div style="grid-column: 1 / -1; text-align:center; padding: 20px;">
+                <div style="font-size: 50px; margin-bottom:8px;">💾✨</div>
+                <div style="font-size: 18px; font-weight:bold; color:#33ff77;">SD Card Found!</div>
+                <div style="margin-top:6px; opacity:0.8; font-size:13px;">"Bứng ra ngoài" thành công!</div>
+                <button class="btn" onclick="closeOverlay()" style="margin-top:16px; background:#fff; color:#000;">Collect</button>
+             </div>
+           `;
+           // Remove grid constraints for the success message to center nicely
+           grid.style.display = 'flex';
+           grid.style.flexDirection = 'column';
+           grid.style.alignItems = 'center';
+           status.textContent = `Won in ${flips} flips!`;
+        }
+      });
+    }
+    // =========================
+    // MINI-GAME 4: COLOR WIRING MAP
+    // =========================
+    function openWiringMap() {
+      openOverlay("Color Wiring Map (Machine Table)", () => {
+        overlayBody.innerHTML = `
+          <div style="font-size:13px;line-height:1.5;">
+            Match each wire to the correct color based on the legend.<br>
+            <b>How to play:</b> Pick a color, then click a wire to paint it.
+          </div>
+
+          <div class="row" style="margin-top:8px;">
+            <div class="hint" id="wiringLegend"></div>
+            <button class="btn" id="resetWiring">Reset</button>
+          </div>
+
+          <canvas id="wiringCanvas" width="900" height="420" style="width:100%;height:420px;background:#111;border-radius:14px;display:block;"></canvas>
+          <div id="wiringPalette" style="display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;"></div>
+          <div class="hint" id="wiringStatus" style="margin-top:10px;"></div>
+        `;
+
+        const c = overlayBody.querySelector("#wiringCanvas");
+        const mctx = c.getContext("2d");
+        const legendEl = overlayBody.querySelector("#wiringLegend");
+        const statusEl = overlayBody.querySelector("#wiringStatus");
+        const paletteEl = overlayBody.querySelector("#wiringPalette");
+
+        const targets = [
+          { id: 0, label: "GND", color: "#000000" },
+          { id: 1, label: "VCC", color: "#ff3344" },
+          { id: 2, label: "SDA", color: "#33aaff" },
+          { id: 3, label: "SCL", color: "#33ff77" }
+        ];
+
+        const colors = ["#ff3344","#ffcc33","#33ff77","#33aaff","#a833ff","#000000","#ffffff"];
+
+        const wires = [
+          { id: 0, x1: 240, y1: 140, x2: 660, y2: 140, paint: "#ffffff" },
+          { id: 1, x1: 240, y1: 200, x2: 660, y2: 200, paint: "#ffffff" },
+          { id: 2, x1: 240, y1: 260, x2: 660, y2: 260, paint: "#ffffff" },
+          { id: 3, x1: 240, y1: 320, x2: 660, y2: 320, paint: "#ffffff" }
+        ];
+
+        let selected = colors[0];
+
+        function renderLegend() {
+          legendEl.innerHTML = targets.map(t =>
+            `<b>${t.label}</b>: <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${t.color};border:1px solid rgba(255,255,255,0.35);vertical-align:middle;"></span>`
+          ).join(" &nbsp; | &nbsp; ");
+        }
+
+        function buildPalette() {
+          paletteEl.innerHTML = "";
+          colors.forEach(col => {
+            const d = document.createElement("div");
+            d.className = "swatch";
+            d.style.background = col;
+            d.style.outline = (col === selected) ? "3px solid rgba(255,255,255,0.9)" : "none";
+            d.onclick = () => { selected = col; buildPalette(); };
+            paletteEl.appendChild(d);
+          });
+        }
+
+        function drawBoard() {
+          mctx.clearRect(0,0,900,420);
+
+          mctx.fillStyle = "#101010";
+          mctx.fillRect(0,0,900,420);
+
+          mctx.fillStyle = "#222";
+          mctx.fillRect(90, 90, 130, 270);
+          mctx.fillRect(680, 90, 130, 270);
+
+          mctx.fillStyle = "#fff";
+          mctx.font = "16px Arial";
+          mctx.fillText("Sensor", 125, 120);
+          mctx.fillText("MCU", 725, 120);
+
+          const labels = ["GND", "VCC", "SDA", "SCL"];
+          for (let i=0;i<4;i++){
+            mctx.fillStyle = "rgba(255,255,255,0.85)";
+            mctx.font = "14px Arial";
+            mctx.fillText(labels[i], 110, wires[i].y1 + 5);
+            mctx.fillText(labels[i], 720, wires[i].y1 + 5);
+          }
+
+          mctx.lineWidth = 10;
+          mctx.lineCap = "round";
+          wires.forEach(w => {
+            mctx.strokeStyle = w.paint;
+            mctx.beginPath();
+            mctx.moveTo(w.x1, w.y1);
+            mctx.lineTo(w.x2, w.y2);
+            mctx.stroke();
+
+            mctx.lineWidth = 2;
+            mctx.strokeStyle = "rgba(255,255,255,0.12)";
+            mctx.strokeRect(Math.min(w.x1,w.x2), w.y1 - 10, Math.abs(w.x2-w.x1), 20);
+            mctx.lineWidth = 10;
+          });
+
+          mctx.fillStyle = "rgba(255,255,255,0.75)";
+          mctx.font = "13px Arial";
+          mctx.fillText("Pick a color below, then click a wire to paint it.", 260, 60);
+        }
+
+        function resetGame() {
+          wires.forEach(w => w.paint = "#ffffff");
+          statusEl.textContent = "Reset done. Paint the wires to match the legend.";
+          buildPalette();
+          drawBoard();
+        }
+
+        function checkWin() {
+          for (let i=0;i<targets.length;i++){
+            if (wires[i].paint.toLowerCase() !== targets[i].color.toLowerCase()) return false;
+          }
+          return true;
+        }
+
+        function canvasPos(evt){
+          const r = c.getBoundingClientRect();
+          return { x:(evt.clientX-r.left)*(c.width/r.width), y:(evt.clientY-r.top)*(c.height/r.height) };
+        }
+
+        function hitWire(p, w) {
+          const minX = Math.min(w.x1, w.x2);
+          const maxX = Math.max(w.x1, w.x2);
+          return (p.x >= minX && p.x <= maxX && p.y >= (w.y1-14) && p.y <= (w.y1+14));
+        }
+
+        c.addEventListener("click", (e) => {
+          const p = canvasPos(e);
+          for (const w of wires) {
+            if (hitWire(p, w)) {
+              w.paint = selected;
+              drawBoard();
+              statusEl.innerHTML = checkWin()
+                ? "<b>Perfect wiring!</b> You matched the whole map. Press ESC to close."
+                : "Painted! Keep going…";
+              return;
+            }
+          }
+        });
+
+        overlayBody.querySelector("#resetWiring").onclick = resetGame;
+
+        renderLegend();
+        resetGame();
+      });
+    }
+
+    // --- Update
+    function update() {
+      if (overlayOpen) {
+        coords.textContent = `X: ${Math.round(player.x)}, Y: ${Math.round(player.y)}`;
+        computeNearInteraction();
+        return;
+      }
+
+      let newX = player.x;
+      let newY = player.y;
+      if (keys['w']) newY -= player.speed;
+      if (keys['s']) newY += player.speed;
+      if (keys['a']) newX -= player.speed;
+      if (keys['d']) newX += player.speed;
+
+      if (!collides(newX, player.y)) player.x = newX;
+      if (!collides(player.x, newY)) player.y = newY;
+
+      coords.textContent = `X: ${Math.round(player.x)}, Y: ${Math.round(player.y)}`;
+      computeNearInteraction();
+    }
+
+    // --- Draw
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      if (bgLoaded) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      else {
+        ctx.fillStyle="#333"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle="#ddd"; ctx.font="26px Arial"; ctx.fillText("Missing background/makerspace.png", 30, 60);
+      }
+
+      if (charLoaded) ctx.drawImage(char, player.x, player.y, player.w, player.h);
+      else { ctx.fillStyle="#f00"; ctx.fillRect(player.x, player.y, player.w, player.h); }
+
+            if (DEBUG_ZONES) {
+        // Debug obstacle boxes (RED)
+        ctx.strokeStyle = "rgba(255,0,0,0.35)";
+        for (const o of getObstacles()) ctx.strokeRect(o.x, o.y, o.w, o.h);
+
+        // Debug interaction boxes (GREEN)
+        ctx.strokeStyle = "rgba(0,255,0,0.55)";
+        ctx.lineWidth = 2;
+        for (const it of getInteractions()) {
+          const r = it.rect;
+          ctx.strokeRect(r.x, r.y, r.w, r.h);
+        }
+        ctx.lineWidth = 1;
+      }
+
+
+      if (nearInteraction && !overlayOpen) {
+        const text = nearInteraction.prompt;
+        ctx.font = '16px Arial';
+        const textWidth = ctx.measureText(text).width;
+        const pad = 10;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.82)';
+        ctx.fillRect(
+          player.x + player.w/2 - textWidth/2 - pad,
+          player.y - 44,
+          textWidth + pad*2,
+          30
+        );
+        ctx.fillStyle = 'white';
+        ctx.fillText(text, player.x + player.w/2 - textWidth/2, player.y - 22);
+      }
+    }
+
+    function loop() { update(); draw(); requestAnimationFrame(loop); }
+  </script>
+</body>
+</html>

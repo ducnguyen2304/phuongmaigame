@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>FUV Game</title>
+<style>
+* { margin: 0; padding: 0; overflow: hidden; }
+body { background: #000; opacity: 0; transition: opacity 1s; }
+canvas { display: block; pointer-events: none; }
+#coords { position: fixed; top: 10px; left: 10px; color: white; font-family: monospace; font-size: 16px; background: rgba(0,0,0,0.5); padding: 5px 10px; pointer-events: none; }
+#backBtn { position: fixed; bottom: 20px; left: 20px; padding: 10px 15px; background: rgba(0,0,0,0.7); color: white; border: 2px solid white; border-radius: 5px; cursor: pointer; font-size: 14px; z-index: 1000; transition: background 0.3s; pointer-events: auto; }
+#backBtn:hover { background: rgba(255,255,255,0.2); }
+@keyframes pulse {
+  0% { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 0.7; transform: scale(1.2); }
+}
+</style>
+</head>
+<body>
+<div id="coords">X: 0, Y: 0</div>
+<button id="backBtn" onclick="window.location.href='index.html'">← Return to Common Area</button>
+<canvas id="classroom1"></canvas>
+<script>
+setTimeout(() => document.body.style.opacity = '1', 10);
+
+const canvas = document.getElementById('classroom1');
+const ctx = canvas.getContext('2d');
+const coords = document.getElementById('coords');
+
+
+// Set canvas to full window size
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Update canvas size when window resizes
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// Image loading system
+const bg = new Image();
+const char = new Image();
+let loaded = 0;
+
+// Start game only when BOTH images finished loading
+function start() {
+  loaded++;
+  if (loaded === 2) loop();
+}
+
+// Assign load listeners
+bg.onload = start;
+char.onload = start;
+
+// Set image sources
+bg.src = '/background/class1.png';
+char.src = '/character/char.png';
+
+// Player properties
+const player = { x: 100, y: 600, w: 80, h: 130, speed: 6 };
+const keys = {};
+
+// Objects in classroom
+const table = { x: 230, y: 420, w: 380, h: 250 };
+const desk = { x: 890, y: 420, w: 380, h: 250 };
+
+
+// Sound checkpoint (J97)
+const checkpoints = [
+  { x: 223, y: 409, w: 195, h: 135, triggerDistance: 150, sound: new Audio('/sound/jack.mp3'), played: false }
+];
+
+let nearCheckpoint = null;
+let musicStarted = false;
+
+// Tobias checkpoint
+const tobiasBurger = { x: 70, y: 250, triggerDistance: 100, sound: new Audio('/sound/tobias.mp3'), played: false };
+let nearTobias = false; 
+let tobiasPlayed = false;
+
+// Speed checkpoint
+const SPpeedSound = {x: 1150, y: 675, triggerDistance: 100, sound: new Audio('/sound/speed.mp3'), played: false };
+let nearSpeed = false;
+let speedPlayed = false;
+
+// mu checkpoint
+const muSound = {x:940, y:496, triggerDistance:100, sound: new Audio('/sound/mu.mp3'), played:false};
+let nearMu = false;
+let muPlayed = false;
+const muImg = new Image();
+muImg.src = '/asset/mu.png';
+
+// Linh Huynh checkpoint - displays image bubble
+const linhhuynh = { x: 1200, y: 160, triggerDistance: 150};
+let nearLinhhuynh = false;
+const linhhuyhnhImg = new Image();
+linhhuyhnhImg.src = '/asset/linhhuynh.png';
+
+// Lan checkpoint - displays image bubble
+const lan = { x: 1300, y: 225, triggerDistance: 100 };
+let nearLan = false;
+const lanImg = new Image();
+lanImg.src = '/asset/lan.png';
+
+// Nathan checkpoint - displays image bubble
+const nathan = { x: 1414, y: 190, triggerDistance: 100 };
+let nearNathan = false;
+const nathanImg = new Image();
+nathanImg.src = '/asset/nathan.png';
+
+// Mini-game checkpointf
+const miniGame = { x: 523, y: 472, triggerDistance: 150 };
+let nearMiniGame = false;
+let minigameOpen = false;
+
+// Mini-game state
+let minigameSequence = [];
+let playerInput = [];
+let minigameTimer = 8; 
+let minigameStarted = false;
+let minigameWon = false;
+let minigameLost = false;
+
+// Keyboard shortcut names
+const shortcuts = ['Ctrl+C', 'Ctrl+V'];
+
+// Initialize mini-game sequence
+function initMiniGame() {
+  minigameSequence = [];
+  playerInput = [];
+  minigameTimer = 8;
+  minigameStarted = true;
+  minigameWon = false;
+  minigameLost = false;
+  
+  // Generate random sequence of 20 shortcuts
+  for (let i = 0; i < 20; i++) {
+    minigameSequence.push(shortcuts[Math.floor(Math.random() * shortcuts.length)]);
+  }
+}
+
+// Tobias checkpoint - displays image bubble
+const tobiasCheckpoint = { x: 121, y: 235, triggerDistance: 100};
+let nearTobiasCheckpoint = false;
+const tobiasImg = new Image();
+tobiasImg.src = '/asset/tobias.png';
+
+
+// Detect when player is close enough to checkpoints
+function checkCheckpoints() {
+  const pcx = player.x + player.w / 2;
+  const pcy = player.y + player.h / 2;
+
+  nearCheckpoint = null;
+  nearTobias = false;
+  nearSpeed = false;
+  nearMu = false;
+  nearLinhhuynh = false;
+  nearLan = false;
+  nearNathan = false;
+  nearTobiasCheckpoint = false;
+  nearMiniGame = false;
+
+  // Check Jack checkpoint
+  checkpoints.forEach(cp => {
+    const dist = Math.hypot(pcx - (cp.x + cp.w/2), pcy - (cp.y + cp.h/2));
+
+    if (dist < cp.triggerDistance && !cp.played) {
+      nearCheckpoint = cp;
+    } else if (dist >= cp.triggerDistance) {
+      cp.played = false;
+    }
+  });
+
+  // Check Tobias checkpoint
+  const tobiasDist = Math.hypot(pcx - tobiasBurger.x, pcy - tobiasBurger.y);
+  if (tobiasDist < tobiasBurger.triggerDistance && !tobiasBurger.played) {
+    nearTobias = true;
+  } else if (tobiasDist >= tobiasBurger.triggerDistance) {
+    tobiasBurger.played = false;
+  }
+
+  // Check Speed checkpoint
+  const speedDist = Math.hypot(pcx - SPpeedSound.x, pcy - SPpeedSound.y);
+  if (speedDist < SPpeedSound.triggerDistance && !SPpeedSound.played) {
+    nearSpeed = true;
+  } else if (speedDist >= SPpeedSound.triggerDistance) {
+    SPpeedSound.played = false;
+  }
+
+  // Check Mu checkpoint
+  const muDist = Math.hypot(pcx - muSound.x, pcy - muSound.y);
+  if (muDist < muSound.triggerDistance && !muSound.played) {
+    nearMu = true;
+  } else if (muDist >= muSound.triggerDistance) {
+    muSound.played = false;
+  }
+
+  // Check Linh Huynh checkpoint
+  const linhhuyhnhDist = Math.hypot(pcx - linhhuynh.x, pcy - linhhuynh.y);
+  if (linhhuyhnhDist < linhhuynh.triggerDistance) {
+    nearLinhhuynh = true;
+  } else {
+    nearLinhhuynh = false;
+  }
+
+  // Check Lan checkpoint
+  const lanDist = Math.hypot(pcx - lan.x, pcy - lan.y);
+  if (lanDist < lan.triggerDistance) {
+    nearLan = true;
+  } else {
+    nearLan = false;
+  }
+
+  // Check Nathan checkpoint
+  const nathanDist = Math.hypot(pcx - nathan.x, pcy - nathan.y);
+  if (nathanDist < nathan.triggerDistance) {
+    nearNathan = true;
+  } else {
+    nearNathan = false;
+  }
+
+  // Check Tobias checkpoint
+  const tobiasDist2 = Math.hypot(pcx - tobiasCheckpoint.x, pcy - tobiasCheckpoint.y);
+  if (tobiasDist2 < tobiasCheckpoint.triggerDistance) {
+    nearTobiasCheckpoint = true;
+  } else {
+    nearTobiasCheckpoint = false;
+  }
+
+  // Check Mini-game checkpoint
+  const miniGameDist = Math.hypot(pcx - miniGame.x, pcy - miniGame.y);
+  if (miniGameDist < miniGame.triggerDistance) {
+    nearMiniGame = true;
+  } else {
+    nearMiniGame = false;
+  }
+}
+
+// Background music setup
+const bgMusic = new Audio('/sound/openingc1.mp3');
+bgMusic.volume = 0;
+
+// helper to pause bgMusic while a checkpoint sound plays, then resume once
+let _bgResumeHandler = null;
+function playCheckpointSound(sound) {
+  const bgWasPlaying = !bgMusic.paused && !bgMusic.ended;
+
+  // clear any previous resume handler to avoid multiple resumes
+  if (_bgResumeHandler && typeof _bgResumeHandler === 'function') {
+    try { sound.removeEventListener('ended', _bgResumeHandler); } catch (e) {}
+    _bgResumeHandler = null;
+  }
+
+  try { sound.currentTime = 0; } catch (e) {}
+  sound.play().catch(() => {});
+
+  if (bgWasPlaying) {
+    try { bgMusic.pause(); } catch (e) {}
+    _bgResumeHandler = () => {
+      // only resume if music was started by the player
+      if (musicStarted) bgMusic.play().catch(() => {});
+      _bgResumeHandler = null;
+    };
+    sound.addEventListener('ended', _bgResumeHandler, { once: true });
+  }
+}
+
+// Disco intro animation container
+const intro = document.createElement('div');
+intro.innerHTML = '<img src="/asset/disco-ball.gif" style="max-width:50%; max-height:50%; mix-blend-mode: lighten;">';
+intro.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:transparent;display:flex;justify-content:center;align-items:flex-start;padding-top:10px;z-index:9999;transition:opacity 1s;pointer-events:none;';
+
+// Light effects
+const lights = document.createElement('div');
+lights.style.cssText = 'position:fixed;top:250px;left:0;width:100%;height:150px;display:flex;justify-content:center;gap:60px;align-items:center;pointer-events:none;z-index:9998;';
+['#ff0066','#00ffff','#ff00ff','#ffff00','#00ff00','#ff0066','#00ffff'].forEach((color, i) => {
+  const c = document.createElement('div');
+  c.style.cssText = `width:50px;height:50px;border-radius:50%;background:radial-gradient(circle,${color},transparent);opacity:0.6;animation:pulse ${1+i*0.2}s infinite alternate;filter:blur(15px);`;
+  lights.appendChild(c);
+});
+
+// Start music + effects when user first uses movement keys
+document.addEventListener('keydown', e => {
+  if (!['w','a','s','d','h'].includes(e.key)) return;
+
+  if (!musicStarted) {
+    musicStarted = true;
+    bgMusic.play().catch(() => {});
+    document.body.appendChild(intro);
+    document.body.appendChild(lights);
+
+    setTimeout(() => {
+      intro.style.opacity = '0';
+      lights.style.transition = 'opacity 1s';
+      lights.style.opacity = '0';
+      setTimeout(() => {
+        intro.remove();
+        lights.remove();
+      }, 1000);
+    }, 16000);
+  }
+}, { capture: true });
+
+
+// WASD movement + H key to trigger greeting
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+
+  // Disable arrow keys so player only moves with WASD
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+  }
+
+  if (e.key === 'h') {
+    if (nearCheckpoint) {
+      playCheckpointSound(nearCheckpoint.sound);
+      nearCheckpoint.played = true;
+    }
+    if (nearTobias) {
+      playCheckpointSound(tobiasBurger.sound);
+      tobiasBurger.played = true;
+    }
+    if (nearSpeed) {
+      playCheckpointSound(SPpeedSound.sound);
+      SPpeedSound.played = true;
+    }
+    if (nearMu) {
+      playCheckpointSound(muSound.sound);
+      muSound.played = true;
+    }
+  }
+
+  if (e.key === 'e') {
+    if (nearMiniGame && !minigameOpen) {
+      minigameOpen = true;
+      initMiniGame();
+    } else if (minigameOpen) {
+      minigameOpen = false;
+      minigameStarted = false;
+    }
+  }
+
+  // Retry mini-game with T key
+  if (e.key === 't' && minigameOpen && (minigameWon || minigameLost)) {
+    initMiniGame();
+  }
+
+  // Handle mini-game keyboard shortcuts
+  if (minigameOpen && minigameStarted && !minigameWon && !minigameLost) {
+    let pressedShortcut = null;
+
+    if (e.ctrlKey) {
+      if (e.key === 'c') pressedShortcut = 'Ctrl+C';
+      else if (e.key === 'v') pressedShortcut = 'Ctrl+V';
+    }
+
+    if (pressedShortcut) {
+      // Check if it matches the next expected shortcut
+      if (pressedShortcut === minigameSequence[playerInput.length]) {
+        playerInput.push(pressedShortcut);
+
+        // Check if player completed the sequence
+        if (playerInput.length === minigameSequence.length) {
+          minigameWon = true;
+        }
+      } else {
+        // Wrong shortcut - lose
+        minigameLost = true;
+      }
+    }
+  }
+});
+
+// Stop movement on key release
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+// Collision detection against furniture
+function collides(px, py) {
+  if (py < 200) return true;
+  if (px + player.w > desk.x && px < desk.x + desk.w && py + player.h > desk.y && py < desk.y + desk.h) return true;
+  if (px + player.w > table.x && px < table.x + table.w && py + player.h > table.y && py < table.y + table.h) return true;
+  return false;
+}
+
+// Game update logic
+function update() {
+  let newX = player.x;
+  let newY = player.y;
+
+  if (keys['w']) newY -= player.speed;
+  if (keys['s']) newY += player.speed;
+  if (keys['a']) newX -= player.speed;
+  if (keys['d']) newX += player.speed;
+
+  if (!collides(newX, player.y)) player.x = newX;
+  if (!collides(player.x, newY)) player.y = newY;
+
+  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+
+  coords.textContent = `X: ${Math.round(player.x)}, Y: ${Math.round(player.y)}`;
+
+  checkCheckpoints();
+
+  // Update mini-game timer
+  if (minigameOpen && minigameStarted && !minigameWon && !minigameLost) {
+    minigameTimer -= 1/60; // Decrease by frame rate (60fps)
+    if (minigameTimer <= 0) {
+      minigameLost = true;
+    }
+  }
+}
+
+// Game draw logic
+function draw() {
+  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(char, player.x, player.y, player.w, player.h);
+
+  if (nearCheckpoint) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(player.x, player.y - 30, 220, 25);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText('Press H to say hello to Tuan', player.x + 10, player.y - 12);
+  }
+
+  if (nearTobias) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(player.x + 50, player.y - 30, 150, 25);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText('press H to play music', player.x + 50, player.y - 12);
+  }
+
+  if (nearSpeed) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(player.x, player.y - 30, 260, 25);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText('Press H to say hello to Speed', player.x + 10, player.y - 12);
+  }
+
+  if (nearMu) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(player.x-50, player.y - 30, 210, 25);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText('Press H to have a conversation', player.x -40, player.y - 12);
+
+    // Draw mu image bubble
+    if (muImg.width > 0) {
+      const bubbleSize = 120;
+      const bubbleX = muSound.x + 20;
+      const bubbleY = muSound.y - bubbleSize - 50;
+      
+      // Draw image inside bubble
+      ctx.drawImage(muImg, bubbleX + 5, bubbleY + 5, bubbleSize - 10, bubbleSize - 10);
+    }
+  }
+
+  // Draw Linh Huynh image bubble when near
+  if (nearLinhhuynh && linhhuyhnhImg.width > 0) {
+    const bubbleSize = 120;
+    const bubbleX = 990;
+    const bubbleY = 0;
+    
+    // Draw image inside bubble
+    if (linhhuyhnhImg.width > 0) {
+      ctx.drawImage(linhhuyhnhImg, bubbleX + 5, bubbleY + 5, bubbleSize - 10, bubbleSize - 10);
+    }
+  }
+
+  // Draw Lan image bubble when near
+  if (nearLan && lanImg.width > 0) {
+    const bubbleSize = 80;
+    const bubbleX = 1200;
+    const bubbleY = 0;
+    
+    // Draw image inside bubble
+    if (lanImg.width > 0) {
+      ctx.drawImage(lanImg, bubbleX + 5, bubbleY + 5, bubbleSize - 10, bubbleSize - 10);
+    }
+  }
+
+  // Draw Nathan image bubble when near
+  if (nearNathan && nathanImg.width > 0) {
+    const bubbleSize = 90;
+    const bubbleX = 1290;
+    const bubbleY = 0;
+    
+    // Draw image inside bubble
+    if (nathanImg.width > 0) {
+      ctx.drawImage(nathanImg, bubbleX + 5, bubbleY + 5, bubbleSize - 10, bubbleSize - 10);
+    }
+  }
+
+  // Draw Tobias image bubble when near
+  if (nearTobiasCheckpoint && tobiasImg.width > 0) {
+    const bubbleSize = 120;
+    const bubbleX = 4;
+    const bubbleY = 55;
+  
+    // Draw image inside bubble
+    if (tobiasImg.width > 0) {
+      ctx.drawImage(tobiasImg, bubbleX + 5, bubbleY + 5, bubbleSize - 10, bubbleSize - 10);
+    }
+  }
+
+  // Draw mini-game prompt when near
+  if (nearMiniGame) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(player.x - 60, player.y - 30, 180, 25);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText('Press E to play mini-game', player.x - 50, player.y - 12);
+  }
+
+  // Draw mini-game modal window when open
+  if (minigameOpen) {
+    // Dim the background
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw mini-game window
+    const windowWidth = 700;
+    const windowHeight = 550;
+    const windowX = (canvas.width - windowWidth) / 2;
+    const windowY = (canvas.height - windowHeight) / 2;
+
+    ctx.fillStyle = '#333';
+    ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(windowX, windowY, windowWidth, windowHeight);
+
+    // Title bar
+    ctx.fillStyle = '#555';
+    ctx.fillRect(windowX, windowY, windowWidth, 40);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Final Assignment', windowX + 20, windowY + 27);
+
+    // Close button (X)
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('✕', windowX + windowWidth - 30, windowY + 27);
+
+    if (!minigameStarted) {
+      // Instructions screen
+      ctx.fillStyle = 'white';
+      ctx.font = '16px Arial';
+      ctx.fillText('Follow the sequence of keyboard shortcuts!', windowX + 30, windowY + 80);
+      
+      ctx.font = '14px Arial';
+      ctx.fillText('Press the shortcuts in order:', windowX + 30, windowY + 130);
+      
+      let yOffset = 160;
+      for (let i = 0; i < minigameSequence.length; i++) {
+        ctx.fillText((i + 1) + '. ' + minigameSequence[i], windowX + 50, windowY + yOffset);
+        yOffset += 30;
+      }
+      
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#ffff00';
+      ctx.fillText('Start pressing the shortcuts!', windowX + 30, windowY + 500);
+    } else {
+      // Game screen
+      // Instructions at top
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText('Press the shortcuts in order. Press Ctrl+C or Ctrl+V as shown below.', windowX + 30, windowY + 65);
+      ctx.fillText('You only have few seconds to complete this assignment. Try your best. Good luck!', windowX + 30, windowY + 85);
+
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.fillText('Sequence:', windowX + 30, windowY + 110);
+
+      // Display sequence with highlighting - wraps to multiple lines
+      let xOffset = 30;
+      let yOffset = 140;
+      const maxWidth = windowWidth - 60;
+      const itemWidth = 80;
+      
+      for (let i = 0; i < minigameSequence.length; i++) {
+        // Check if we need to wrap to next line
+        if (xOffset + itemWidth > maxWidth) {
+          xOffset = 30;
+          yOffset += 35;
+        }
+        
+        // Highlight current step
+        if (i === playerInput.length) {
+          ctx.fillStyle = '#ffff00';
+        } else if (i < playerInput.length) {
+          ctx.fillStyle = '#00ff00';
+        } else {
+          ctx.fillStyle = '#666';
+        }
+        
+        ctx.fillText(minigameSequence[i], windowX + xOffset, windowY + yOffset);
+        xOffset += itemWidth;
+      }
+
+      // Player progress
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.fillText('Your progress: ' + playerInput.length + '/20', windowX + 30, windowY + 380);
+
+      // Timer
+      ctx.font = 'bold 18px Arial';
+      ctx.fillStyle = minigameTimer <= 5 ? '#ff0000' : '#00ff00';
+      ctx.fillText('Time: ' + Math.max(0, Math.ceil(minigameTimer)) + 's', windowX + 30, windowY + 420);
+
+      // Instructions at bottom
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText('Press E to close', windowX + 30, windowY + 520);
+
+      // Win message
+      if (minigameWon) {
+        ctx.fillStyle = 'rgba(0,255,0,0.3)';
+        ctx.fillRect(windowX + 50, windowY + 250, 600, 100);
+        ctx.fillStyle = '#00ff00';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('Congratulations! You passed this assignment', windowX + 120, windowY + 310);
+        ctx.font = '14px Arial';
+        ctx.fillStyle = 'white';
+        ctx.fillText('Press T to try again or Press E to close', windowX + 220, windowY + 380);
+      }
+
+      // Lose message
+      if (minigameLost) {
+        if (playerInput.length < minigameSequence.length && minigameTimer <= 0) {
+          ctx.fillStyle = 'rgba(255,0,0,0.3)';
+          ctx.fillRect(windowX + 10, windowY + 250, 600, 100);
+          ctx.fillStyle = '#ff0000';
+          ctx.font = 'bold 24px Arial';
+          ctx.fillText('Time\'s up! You missed the deadline :(', windowX + 130, windowY + 310);
+        } else {
+          ctx.fillStyle = 'rgba(255,0,0,0.3)';
+          ctx.fillRect(windowX + 50, windowY + 250, 600, 100);
+          ctx.fillStyle = '#ff0000';
+          ctx.font = 'bold 24px Arial';
+          ctx.fillText('You missed the deadline :(', windowX + 150, windowY + 310);
+        }
+        ctx.font = '14px Arial';
+        ctx.fillStyle = 'white';
+        ctx.fillText('Press T to try again or Press E to close', windowX + 220, windowY + 380);
+      }
+    }
+  }
+}
+
+// Main game loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
