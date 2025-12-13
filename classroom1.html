@@ -239,6 +239,7 @@ function checkCheckpoints() {
 
 // Background music setup
 const bgMusic = new Audio('sound/openingc1.mp3');
+bgMusic.loop = true; 
 bgMusic.volume = 0;
 
 // helper to pause bgMusic while a checkpoint sound plays, then resume once
