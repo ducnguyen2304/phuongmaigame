@@ -74,39 +74,39 @@ let nearCheckpoint = null;
 let musicStarted = false;
 
 // Tobias checkpoint
-const tobiasBurger = { x: 70, y: 250, triggerDistance: 100, sound: new Audio('/sound/tobias.mp3'), played: false };
+const tobiasBurger = { x: 70, y: 250, triggerDistance: 100, sound: new Audio('sound/tobias.mp3'), played: false };
 let nearTobias = false; 
 let tobiasPlayed = false;
 
 // Speed checkpoint
-const SPpeedSound = {x: 1150, y: 675, triggerDistance: 100, sound: new Audio('/sound/speed.mp3'), played: false };
+const SPpeedSound = {x: 1150, y: 675, triggerDistance: 100, sound: new Audio('sound/speed.mp3'), played: false };
 let nearSpeed = false;
 let speedPlayed = false;
 
 // mu checkpoint
-const muSound = {x:940, y:496, triggerDistance:100, sound: new Audio('/sound/mu.mp3'), played:false};
+const muSound = {x:940, y:496, triggerDistance:100, sound: new Audio('sound/mu.mp3'), played:false};
 let nearMu = false;
 let muPlayed = false;
 const muImg = new Image();
-muImg.src = '/asset/mu.png';
+muImg.src = 'asset/mu.png';
 
 // Linh Huynh checkpoint - displays image bubble
 const linhhuynh = { x: 1200, y: 160, triggerDistance: 150};
 let nearLinhhuynh = false;
 const linhhuyhnhImg = new Image();
-linhhuyhnhImg.src = '/asset/linhhuynh.png';
+linhhuyhnhImg.src = 'asset/linhhuynh.png';
 
 // Lan checkpoint - displays image bubble
 const lan = { x: 1300, y: 225, triggerDistance: 100 };
 let nearLan = false;
 const lanImg = new Image();
-lanImg.src = '/asset/lan.png';
+lanImg.src = 'asset/lan.png';
 
 // Nathan checkpoint - displays image bubble
 const nathan = { x: 1414, y: 190, triggerDistance: 100 };
 let nearNathan = false;
 const nathanImg = new Image();
-nathanImg.src = '/asset/nathan.png';
+nathanImg.src = 'asset/nathan.png';
 
 // Mini-game checkpointf
 const miniGame = { x: 523, y: 472, triggerDistance: 150 };
@@ -268,7 +268,7 @@ function playCheckpointSound(sound) {
 
 // Disco intro animation container
 const intro = document.createElement('div');
-intro.innerHTML = '<img src="/asset/disco-ball.gif" style="max-width:50%; max-height:50%; mix-blend-mode: lighten;">';
+intro.innerHTML = '<img src="asset/disco-ball.gif" style="max-width:50%; max-height:50%; mix-blend-mode: lighten;">';
 intro.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:transparent;display:flex;justify-content:center;align-items:flex-start;padding-top:10px;z-index:9999;transition:opacity 1s;pointer-events:none;';
 
 // Light effects
