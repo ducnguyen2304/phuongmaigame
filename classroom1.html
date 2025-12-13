@@ -67,7 +67,7 @@ const desk = { x: 890, y: 420, w: 380, h: 250 };
 
 // Sound checkpoint (J97)
 const checkpoints = [
-  { x: 223, y: 409, w: 195, h: 135, triggerDistance: 150, sound: new Audio('/sound/jack.mp3'), played: false }
+  { x: 223, y: 409, w: 195, h: 135, triggerDistance: 150, sound: new Audio('sound/jack.mp3'), played: false }
 ];
 
 let nearCheckpoint = null;
@@ -143,7 +143,7 @@ function initMiniGame() {
 const tobiasCheckpoint = { x: 121, y: 235, triggerDistance: 100};
 let nearTobiasCheckpoint = false;
 const tobiasImg = new Image();
-tobiasImg.src = '/asset/tobias.png';
+tobiasImg.src = 'asset/tobias.png';
 
 
 // Detect when player is close enough to checkpoints
