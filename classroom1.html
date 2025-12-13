@@ -53,8 +53,8 @@ bg.onload = start;
 char.onload = start;
 
 // Set image sources
-bg.src = '/background/class1.png';
-char.src = '/character/char.png';
+bg.src = 'background/class1.png';
+char.src = 'character/char.png';
 
 // Player properties
 const player = { x: 100, y: 600, w: 80, h: 130, speed: 6 };
@@ -238,7 +238,7 @@ function checkCheckpoints() {
 }
 
 // Background music setup
-const bgMusic = new Audio('/sound/openingc1.mp3');
+const bgMusic = new Audio('sound/openingc1.mp3');
 bgMusic.volume = 0;
 
 // helper to pause bgMusic while a checkpoint sound plays, then resume once
