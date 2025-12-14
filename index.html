@@ -33,22 +33,53 @@ window.addEventListener('resize', () => {
 const bg = new Image();
 const char = new Image();
 
+// walking frames: right-facing (1-3) and left-facing (4-6)
+const walk1 = new Image();
+const walk2 = new Image();
+const walk3 = new Image();
+const walk4 = new Image();
+const walk5 = new Image();
+const walk6 = new Image();
+const walkRightFrames = [walk1, walk2, walk3];
+const walkLeftFrames = [walk4, walk5, walk6];
+
 let assetsLoaded = 0;
+const assetsToLoad = 8; // bg + char + 6 walk frames
 function checkStart() {
   assetsLoaded++;
-  if (assetsLoaded === 2) {
-    loop(); // start game only after bg + char both loaded
+  if (assetsLoaded === assetsToLoad) {
+    // seed loop with a timestamp
+    requestAnimationFrame(loop);
   }
 }
 
 bg.onload = checkStart;
 char.onload = checkStart;
+walk1.onload = checkStart;
+walk2.onload = checkStart;
+walk3.onload = checkStart;
+walk4.onload = checkStart;
+walk5.onload = checkStart;
+walk6.onload = checkStart;
 
 bg.src = 'background/common_area.png';
 char.src = 'character/char.png';
+walk1.src = 'character/char1.png';
+walk2.src = 'character/char2.png';
+walk3.src = 'character/char3.png';
+walk4.src = 'character/char4.png';
+walk5.src = 'character/char5.png';
+walk6.src = 'character/char6.png';
 
 // Player and input 
 const player = { x: 700, y: 600, w: 100, h: 150, speed: 6 };
+// Animation state for walking frames
+let animIndex = 0;
+let animTimer = 0; // ms
+const animInterval = 120; // ms per frame
+let isMoving = false;
+let lastTime = 0;
+let lastDirection = 'right'; // 'left' or 'right'
 const keys = {};
 
 // Obstacles
@@ -176,29 +207,63 @@ document.addEventListener('keydown', e => {
 });
 
 // Update loop 
-function update() {
+function update(dt) {
+  // dt in milliseconds
   let newX = player.x;
   let newY = player.y;
-  
+
   if (keys['w']) newY -= player.speed;
   if (keys['s']) newY += player.speed;
   if (keys['a']) newX -= player.speed;
   if (keys['d']) newX += player.speed;
-  
+
   if (!collides(newX, player.y)) player.x = newX;
   if (!collides(player.x, newY)) player.y = newY;
-  
+
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
-  
+
   coords.textContent = `X: ${Math.round(player.x)}, Y: ${Math.round(player.y)}`;
   checkCheckpoint();
+
+  // Animation update
+  isMoving = !!(keys['w'] || keys['a'] || keys['s'] || keys['d']);
+  // determine horizontal direction preference
+  let horiz = lastDirection;
+  if (keys['a'] && !keys['d']) horiz = 'left';
+  else if (keys['d'] && !keys['a']) horiz = 'right';
+
+  // reset anim when direction changes
+  if (horiz !== lastDirection) {
+    lastDirection = horiz;
+    animIndex = 0;
+    animTimer = 0;
+  }
+
+  const currentFrames = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
+
+  if (isMoving) {
+    animTimer += dt || 16;
+    if (animTimer >= animInterval) {
+      animTimer -= animInterval;
+      animIndex = (animIndex + 1) % currentFrames.length;
+    }
+  } else {
+    animIndex = 0;
+    animTimer = 0;
+  }
 }
 
 // Draw 
 function draw() {
   ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-  ctx.drawImage(char, player.x, player.y, player.w, player.h);
+  // Draw character: walking frames when moving, default char when idle
+  const framesToUse = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
+  if (isMoving && framesToUse[animIndex] && framesToUse[animIndex].naturalWidth > 0) {
+    ctx.drawImage(framesToUse[animIndex], player.x, player.y, player.w, player.h);
+  } else {
+    ctx.drawImage(char, player.x, player.y, player.w, player.h);
+  }
 
   // Show prompt when near checkpoint
 if (nearCheckpoint) {
@@ -252,8 +317,12 @@ if (nearCheckpoint) {
 }
 
 // Main loop
-function loop() {
-  update();
+function loop(now) {
+  if (!lastTime) lastTime = now || performance.now();
+  const dt = (now || performance.now()) - lastTime;
+  lastTime = now || performance.now();
+
+  update(dt);
   draw();
   requestAnimationFrame(loop);
 }
