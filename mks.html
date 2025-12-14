@@ -283,7 +283,7 @@
 
   <div id="help">
     Move: <b>W A S D</b><br>
-    Near Nick & Judy table: <b>L</b> (sound)<br>
+    Near Nick and Judy table: <b>L</b> (sound)<br>
     Near Water table: <b>I</b> (Board Race mini-game)<br>
     Near DST Box: <b>C</b> (Coloring mini-game)<br>
     Near 3D Print table: <b>P</b> (Find SD card mini-game)<br>
@@ -337,21 +337,46 @@
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // --- Assets
+    // --- Assets (background, idle char, and 6 walking frames)
     const bg = new Image();
     const char = new Image();
+    // walking frames: right-facing (1-3) and left-facing (4-6)
+    const walk1 = new Image();
+    const walk2 = new Image();
+    const walk3 = new Image();
+    const walk4 = new Image();
+    const walk5 = new Image();
+    const walk6 = new Image();
+    const walkRightFrames = [walk1, walk2, walk3];
+    const walkLeftFrames = [walk4, walk5, walk6];
+
     let loaded = 0;
+    const assetsToLoad = 8; // bg + char + 6 walk frames
     let bgLoaded = false;
     let charLoaded = false;
 
-    function checkLoaded() { loaded++; if (loaded === 2) loop(); }
+    function checkLoaded() { loaded++; if (loaded === assetsToLoad) requestAnimationFrame(loop); }
     bg.onload = () => { bgLoaded = true; checkLoaded(); };
     bg.onerror = () => { console.warn("BG missing"); checkLoaded(); };
     char.onload = () => { charLoaded = true; checkLoaded(); };
     char.onerror = () => { console.warn("Char missing"); checkLoaded(); };
 
+    // walking frame listeners
+    walk1.onload = () => checkLoaded(); walk1.onerror = () => checkLoaded();
+    walk2.onload = () => checkLoaded(); walk2.onerror = () => checkLoaded();
+    walk3.onload = () => checkLoaded(); walk3.onerror = () => checkLoaded();
+    walk4.onload = () => checkLoaded(); walk4.onerror = () => checkLoaded();
+    walk5.onload = () => checkLoaded(); walk5.onerror = () => checkLoaded();
+    walk6.onload = () => checkLoaded(); walk6.onerror = () => checkLoaded();
+
     bg.src = 'background/Makerspace.png';
     char.src = 'character/char.png';
+    walk1.src = 'character/char1.png';
+    walk2.src = 'character/char2.png';
+    walk3.src = 'character/char3.png';
+    walk4.src = 'character/char4.png';
+    walk5.src = 'character/char5.png';
+    walk6.src = 'character/char6.png';
 
     const MAP_W = 1536;
     const MAP_H = 1024;
@@ -359,6 +384,14 @@
     // --- Player
     const player = { x: 200, y: 600, w: 45, h: 70, speed: 5 };
     const keys = {};
+
+    // Animation state for walking frames
+    let animIndex = 0;
+    let animTimer = 0; // ms
+    const animInterval = 120; // ms per frame
+    let isMoving = false;
+    let lastDirection = 'right'; // 'left' or 'right'
+    let lastTime = 0;
 
     const DEBUG_ZONES = false; // true = hiện khung đỏ/xanh, false = ẩn
 
@@ -447,7 +480,7 @@
                      onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color:#666\\'>Image missing: ${scene.img}</div>'" 
                 />
               </div>
-              <!-- Text & Controls -->
+              <!-- Text and Controls -->
               <div style="margin-top:20px; width:100%; max-width:900px;">
                 <div style="
                   font-size:22px; 
@@ -472,7 +505,7 @@
                     padding:14px 32px;
                     border:2px solid #fff;
                   ">
-                    Next Drama ➡️
+                    Next Drama 
                   </button>
                 </div>
               </div>
@@ -611,7 +644,7 @@
       const Z = getScaledZones();
       return [
         {
-          name: "Nick & Judy Table",
+          name: "Nick and Judy Table",
           rect: Z.Nick_Judy_Table,
           triggerDistance: 160,
           key: "l",
@@ -1470,8 +1503,8 @@
       });
     }
 
-    // --- Update
-    function update() {
+    // --- Update (accepts dt in ms)
+    function update(dt) {
       if (overlayOpen) {
         coords.textContent = `X: ${Math.round(player.x)}, Y: ${Math.round(player.y)}`;
         computeNearInteraction();
@@ -1490,6 +1523,33 @@
 
       coords.textContent = `X: ${Math.round(player.x)}, Y: ${Math.round(player.y)}`;
       computeNearInteraction();
+
+      // Animation update
+      isMoving = !!(keys['w'] || keys['a'] || keys['s'] || keys['d']);
+      // determine horizontal direction preference
+      let horiz = lastDirection;
+      if (keys['a'] && !keys['d']) horiz = 'left';
+      else if (keys['d'] && !keys['a']) horiz = 'right';
+
+      // reset anim when direction changes
+      if (horiz !== lastDirection) {
+        lastDirection = horiz;
+        animIndex = 0;
+        animTimer = 0;
+      }
+
+      const currentFrames = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
+
+      if (isMoving) {
+        animTimer += dt || 16;
+        if (animTimer >= animInterval) {
+          animTimer -= animInterval;
+          animIndex = (animIndex + 1) % currentFrames.length;
+        }
+      } else {
+        animIndex = 0;
+        animTimer = 0;
+      }
     }
 
     // --- Draw
@@ -1502,8 +1562,19 @@
         ctx.fillStyle="#ddd"; ctx.font="26px Arial"; ctx.fillText("Missing background/makerspace.png", 30, 60);
       }
 
-      if (charLoaded) ctx.drawImage(char, player.x, player.y, player.w, player.h);
-      else { ctx.fillStyle="#f00"; ctx.fillRect(player.x, player.y, player.w, player.h); }
+      // choose correct image: walking frames when moving, otherwise idle `char`
+      const framesToUse = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
+      const sprite = isMoving ? framesToUse[animIndex] : char;
+
+      if (charLoaded || isMoving) {
+        try {
+          ctx.drawImage(sprite, player.x, player.y, player.w, player.h);
+        } catch (e) {
+          // fallback to idle char if sprite not ready
+          if (charLoaded) ctx.drawImage(char, player.x, player.y, player.w, player.h);
+          else ctx.fillStyle="#f00", ctx.fillRect(player.x, player.y, player.w, player.h);
+        }
+      } else { ctx.fillStyle="#f00"; ctx.fillRect(player.x, player.y, player.w, player.h); }
 
             if (DEBUG_ZONES) {
         // Debug obstacle boxes (RED)
@@ -1539,7 +1610,15 @@
       }
     }
 
-    function loop() { update(); draw(); requestAnimationFrame(loop); }
+    // Main loop (timestamp-driven for dt)
+    function loop(now) {
+      if (!lastTime) lastTime = now;
+      const dt = now - lastTime;
+      update(dt);
+      draw();
+      lastTime = now;
+      requestAnimationFrame(loop);
+    }
   </script>
 </body>
 </html>
