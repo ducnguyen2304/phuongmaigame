@@ -20,6 +20,41 @@ canvas { display: block; pointer-events: none; }
 <button id="backBtn" onclick="window.location.href='index.html'">← Return to Common Area</button>
 <canvas id="classroom1"></canvas>
 <script>
+// Analytics tracking functions
+function trackPageView(pageName) {
+  const key = 'analytics_' + pageName + '_views';
+  const count = parseInt(localStorage.getItem(key) || '0') + 1;
+  localStorage.setItem(key, count);
+  logEvent('Page View', pageName);
+}
+
+function trackEvent(eventName) {
+  const key = 'analytics_' + eventName + '_clicks';
+  const count = parseInt(localStorage.getItem(key) || '0') + 1;
+  localStorage.setItem(key, count);
+  logEvent(eventName.replace('_', ' ').toUpperCase(), getCurrentPage());
+}
+
+function logEvent(action, page) {
+  const eventLog = JSON.parse(localStorage.getItem('analytics_event_log') || '[]');
+  eventLog.push({
+    timestamp: new Date().toLocaleString(),
+    action: action,
+    page: page
+  });
+  if (eventLog.length > 100) {
+    eventLog.splice(0, eventLog.length - 100);
+  }
+  localStorage.setItem('analytics_event_log', JSON.stringify(eventLog));
+}
+
+function getCurrentPage() {
+  return 'classroom1.html';
+}
+
+// Track page view on load
+trackPageView('classroom');
+
 setTimeout(() => document.body.style.opacity = '1', 10);
 
 const canvas = document.getElementById('classroom1');
@@ -172,7 +207,7 @@ let stabBarX = 0; // current position of the candy bottle (0-1 range)
 let stabBarDir = 1; // direction: 1 = right, -1 = left
 let stabBarSpeed = 0.050; // speed per frame (adjust for difficulty)
 let stabSafeZoneStart = 0.6; // safe zone starts at 60%
-let stabSafeZoneEnd = 0.60005; // safe zone ends at 61% (small zone)
+let stabSafeZoneEnd = 0.60005; // safe zone ends at 61% 
 let stabStopped = false; // whether player has clicked stabilize
 
 // Load kera.png (candy bottle) asset
@@ -457,6 +492,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'e') {
     // Primary mini-game (near miniGame)
     if (nearMiniGame && !minigameOpen) {
+      trackEvent('minigame');
       minigameOpen = true;
       initMiniGame();
     } else if (minigameOpen) {
@@ -466,6 +502,7 @@ document.addEventListener('keydown', e => {
 
     // Secondary mini-game (near miniGame2)
     if (nearMiniGame2 && !minigame2Open && !minigameOpen) {
+      trackEvent('minigame');
       minigame2Open = true;
       initMiniGame2();
     } else if (minigame2Open && !nearMiniGame) {
