@@ -314,6 +314,41 @@
   <canvas id="makerspace"></canvas>
 
   <script>
+    // Analytics tracking functions
+    function trackPageView(pageName) {
+      const key = 'analytics_' + pageName + '_views';
+      const count = parseInt(localStorage.getItem(key) || '0') + 1;
+      localStorage.setItem(key, count);
+      logEvent('Page View', pageName);
+    }
+
+    function trackEvent(eventName) {
+      const key = 'analytics_' + eventName + '_clicks';
+      const count = parseInt(localStorage.getItem(key) || '0') + 1;
+      localStorage.setItem(key, count);
+      logEvent(eventName.replace('_', ' ').toUpperCase(), getCurrentPage());
+    }
+
+    function logEvent(action, page) {
+      const eventLog = JSON.parse(localStorage.getItem('analytics_event_log') || '[]');
+      eventLog.push({
+        timestamp: new Date().toLocaleString(),
+        action: action,
+        page: page
+      });
+      if (eventLog.length > 100) {
+        eventLog.splice(0, eventLog.length - 100);
+      }
+      localStorage.setItem('analytics_event_log', JSON.stringify(eventLog));
+    }
+
+    function getCurrentPage() {
+      return 'mks.html';
+    }
+
+    // Track page view on load
+    trackPageView('mks');
+
     setTimeout(() => document.body.style.opacity = '1', 10);
 
     const canvas = document.getElementById('makerspace');
@@ -634,6 +669,7 @@
         `;
 
         overlayBody.querySelector("#openPdfNewTab").onclick = () => {
+          trackEvent('hearty_pdf');
           window.open(HEARTY_PDF, "_blank");
         };
       });
@@ -672,6 +708,7 @@
           key: "v",
           prompt: "Press V to turn on the TV",
           onTrigger: () => {
+            trackEvent('tv_poster');
             openOverlay("Innovation Bootcamp Info", () => {
               overlayBody.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
