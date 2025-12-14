@@ -40,25 +40,58 @@ window.addEventListener('resize', () => {
 // Image loading system
 const bg = new Image();
 const char = new Image();
-let loaded = 0;
+// walking frames: right-facing (1-3) and left-facing (4-6)
+const walk1 = new Image();
+const walk2 = new Image();
+const walk3 = new Image();
+const walk4 = new Image();
+const walk5 = new Image();
+const walk6 = new Image();
+const walkRightFrames = [walk1, walk2, walk3];
+const walkLeftFrames = [walk4, walk5, walk6];
 
-// Start game only when BOTH images finished loading
+let loaded = 0;
+const assetsToLoad = 8; // bg + char + 6 walk frames
+
+// Start game only when all images finished loading
 function start() {
   loaded++;
-  if (loaded === 2) loop();
+  if (loaded === assetsToLoad) {
+    // seed loop
+    requestAnimationFrame(loop);
+  }
 }
 
 // Assign load listeners
 bg.onload = start;
 char.onload = start;
+walk1.onload = start;
+walk2.onload = start;
+walk3.onload = start;
+walk4.onload = start;
+walk5.onload = start;
+walk6.onload = start;
 
 // Set image sources
 bg.src = 'background/class1.png';
 char.src = 'character/char.png';
+walk1.src = 'character/char1.png';
+walk2.src = 'character/char2.png';
+walk3.src = 'character/char3.png';
+walk4.src = 'character/char4.png';
+walk5.src = 'character/char5.png';
+walk6.src = 'character/char6.png';
 
 // Player properties
 const player = { x: 100, y: 600, w: 80, h: 130, speed: 6 };
 const keys = {};
+// Animation state for walking frames
+let animIndex = 0;
+let animTimer = 0; // ms
+const animInterval = 120; // ms per frame
+let isMoving = false;
+let lastDirection = 'right'; // 'left' or 'right'
+let lastTime = 0;
 
 // Objects in classroom
 const table = { x: 230, y: 420, w: 380, h: 250 };
@@ -115,6 +148,11 @@ const miniGame = { x: 523, y: 472, triggerDistance: 150 };
 let nearMiniGame = false;
 let minigameOpen = false;
 
+// Second mini-game checkpoint
+const miniGame2 = { x: 721, y: 211, triggerDistance: 150 };
+let nearMiniGame2 = false;
+let minigame2Open = false;
+
 // Mini-game state
 let minigameSequence = [];
 let playerInput = [];
@@ -122,6 +160,14 @@ let minigameTimer = 8;
 let minigameStarted = false;
 let minigameWon = false;
 let minigameLost = false;
+
+// Second mini-game state (simple sequential key challenge)
+let minigame2Sequence = [];
+let playerInput2 = [];
+let minigame2Timer = 12;
+let minigame2Started = false;
+let minigame2Won = false;
+let minigame2Lost = false;
 
 // Keyboard shortcut names
 const shortcuts = ['Ctrl+C', 'Ctrl+V'];
@@ -141,6 +187,21 @@ function initMiniGame() {
   }
 }
 
+// Initialize second mini-game (uses keys 'x' and 'z')
+function initMiniGame2() {
+  minigame2Sequence = [];
+  playerInput2 = [];
+  minigame2Timer = 12; // seconds
+  minigame2Started = true;
+  minigame2Won = false;
+  minigame2Lost = false;
+
+  const choices = ['x','z'];
+  for (let i = 0; i < 12; i++) {
+    minigame2Sequence.push(choices[Math.floor(Math.random() * choices.length)]);
+  }
+}
+
 // Tobias checkpoint - displays image bubble
 const tobiasCheckpoint = { x: 121, y: 235, triggerDistance: 100};
 let nearTobiasCheckpoint = false;
@@ -152,6 +213,8 @@ const t1 = { x: 262, y: 643, triggerDistance: 120, sound: new Audio('sound/t1.mp
 let nearT1 = false;
 const t1Img = new Image();
 t1Img.src = 'asset/t1.png';
+// Make t1 a bit louder than the default checkpoint volume
+try { t1.sound._preferredVolume = 1.0; } catch (e) {}
 
 
 // Detect when player is close enough to checkpoints
@@ -168,6 +231,7 @@ function checkCheckpoints() {
   nearNathan = false;
   nearTobiasCheckpoint = false;
   nearMiniGame = false;
+  nearMiniGame2 = false;
 
   // Check Jack checkpoint
   checkpoints.forEach(cp => {
@@ -252,6 +316,14 @@ function checkCheckpoints() {
   } else {
     nearMiniGame = false;
   }
+
+  // Check second mini-game checkpoint
+  const miniGame2Dist = Math.hypot(pcx - miniGame2.x, pcy - miniGame2.y);
+  if (miniGame2Dist < miniGame2.triggerDistance) {
+    nearMiniGame2 = true;
+  } else {
+    nearMiniGame2 = false;
+  }
 }
 
 // Background music setup
@@ -282,7 +354,10 @@ function playCheckpointSound(sound) {
     sound.currentTime = 0;
   } catch (e) {}
 
-  sound.volume = 0.8;
+    // Respect a preferred volume on the sound object if present, otherwise use 0.8
+    try {
+      sound.volume = (typeof sound._preferredVolume === 'number') ? sound._preferredVolume : 0.8;
+    } catch (e) {}
 
   sound.play().catch(() => {});
 
@@ -371,6 +446,7 @@ document.addEventListener('keydown', e => {
   }
 
   if (e.key === 'e') {
+    // Primary mini-game (near miniGame)
     if (nearMiniGame && !minigameOpen) {
       minigameOpen = true;
       initMiniGame();
@@ -378,11 +454,22 @@ document.addEventListener('keydown', e => {
       minigameOpen = false;
       minigameStarted = false;
     }
+
+    // Secondary mini-game (near miniGame2)
+    if (nearMiniGame2 && !minigame2Open && !minigameOpen) {
+      minigame2Open = true;
+      initMiniGame2();
+    } else if (minigame2Open && !nearMiniGame) {
+      // allow closing the second mini-game with E as well
+      minigame2Open = false;
+      minigame2Started = false;
+    }
   }
 
   // Retry mini-game with T key
-  if (e.key === 't' && minigameOpen && (minigameWon || minigameLost)) {
-    initMiniGame();
+  if (e.key === 't') {
+    if (minigameOpen && (minigameWon || minigameLost)) initMiniGame();
+    if (minigame2Open && (minigame2Won || minigame2Lost)) initMiniGame2();
   }
 
   // Handle mini-game keyboard shortcuts
@@ -409,6 +496,18 @@ document.addEventListener('keydown', e => {
       }
     }
   }
+
+  // Second mini-game input (simple 'x'/'z' sequence)
+  if (minigame2Open && minigame2Started && !minigame2Won && !minigame2Lost) {
+    const k = e.key.toLowerCase();
+    if (k === minigame2Sequence[playerInput2.length]) {
+      playerInput2.push(k);
+      if (playerInput2.length === minigame2Sequence.length) minigame2Won = true;
+    } else if (k === 'x' || k === 'z') {
+      // wrong key of allowed set -> lose
+      minigame2Lost = true;
+    }
+  }
 });
 
 // Stop movement on key release
@@ -423,7 +522,7 @@ function collides(px, py) {
 }
 
 // Game update logic
-function update() {
+function update(dt) {
   let newX = player.x;
   let newY = player.y;
 
@@ -442,11 +541,48 @@ function update() {
 
   checkCheckpoints();
 
-  // Update mini-game timer
+  // Animation update
+  isMoving = !!(keys['w'] || keys['a'] || keys['s'] || keys['d']);
+  // determine horizontal direction preference
+  let horiz = lastDirection;
+  if (keys['a'] && !keys['d']) horiz = 'left';
+  else if (keys['d'] && !keys['a']) horiz = 'right';
+
+  // reset anim when direction changes
+  if (horiz !== lastDirection) {
+    lastDirection = horiz;
+    animIndex = 0;
+    animTimer = 0;
+  }
+
+  const currentFrames = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
+
+  if (isMoving) {
+    animTimer += dt || 16;
+    if (animTimer >= animInterval) {
+      animTimer -= animInterval;
+      animIndex = (animIndex + 1) % currentFrames.length;
+    }
+  } else {
+    animIndex = 0;
+    animTimer = 0;
+  }
+
+  // Update mini-game timer (use dt if provided)
   if (minigameOpen && minigameStarted && !minigameWon && !minigameLost) {
-    minigameTimer -= 1/60; // Decrease by frame rate (60fps)
+    if (dt) minigameTimer -= dt/1000;
+    else minigameTimer -= 1/60; // fallback
     if (minigameTimer <= 0) {
       minigameLost = true;
+    }
+  }
+
+  // Update second mini-game timer
+  if (minigame2Open && minigame2Started && !minigame2Won && !minigame2Lost) {
+    if (dt) minigame2Timer -= dt/1000;
+    else minigame2Timer -= 1/60;
+    if (minigame2Timer <= 0) {
+      minigame2Lost = true;
     }
   }
 }
@@ -497,7 +633,11 @@ function triggerDiscoEffects() {
 // Game draw logic
 function draw() {
   ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-  ctx.drawImage(char, player.x, player.y, player.w, player.h);
+
+  // choose correct image: walking frames when moving, otherwise idle `char`
+  const framesToUse = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
+  const sprite = isMoving ? framesToUse[animIndex] : char;
+  ctx.drawImage(sprite, player.x, player.y, player.w, player.h);
 
   if (nearCheckpoint) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -616,6 +756,15 @@ function draw() {
     ctx.fillStyle = 'white';
     ctx.font = '14px Arial';
     ctx.fillText('Press E to play mini-game', player.x - 50, player.y - 12);
+  }
+
+  // Draw second mini-game prompt when near
+  if (nearMiniGame2) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(player.x - 60, player.y - 60, 220, 25);
+    ctx.fillStyle = 'white';
+    ctx.font = '14px Arial';
+    ctx.fillText('Press E to play Mini-game 2', player.x - 50, player.y - 42);
   }
 
   // Draw mini-game modal window when open
@@ -752,12 +901,93 @@ function draw() {
       }
     }
   }
+
+  // Draw second mini-game modal window when open
+  if (minigame2Open) {
+    // Dim the background slightly
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const windowWidth = 620;
+    const windowHeight = 420;
+    const windowX = (canvas.width - windowWidth) / 2;
+    const windowY = (canvas.height - windowHeight) / 2;
+
+    ctx.fillStyle = '#222';
+    ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(windowX, windowY, windowWidth, windowHeight);
+
+    // Title
+    ctx.fillStyle = '#444';
+    ctx.fillRect(windowX, windowY, windowWidth, 40);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Mini-game 2 — Quick Keys', windowX + 20, windowY + 27);
+
+    if (!minigame2Started) {
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.fillText('Follow a short sequence of keys (x and z).', windowX + 20, windowY + 80);
+      ctx.fillText('Press E to start. Press E again to close.', windowX + 20, windowY + 110);
+
+      // Show the sequence (hidden until started)
+      ctx.fillStyle = '#ffff00';
+      ctx.font = '12px Arial';
+      ctx.fillText('Sequence will appear when you start.', windowX + 20, windowY + 160);
+    } else {
+      // Game screen
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.fillText('Sequence:', windowX + 20, windowY + 80);
+
+      // Display sequence with highlighting
+      let xOffset = 20;
+      let yOffset = 110;
+      const itemWidth = 36;
+      for (let i = 0; i < minigame2Sequence.length; i++) {
+        if (i === playerInput2.length) ctx.fillStyle = '#ffff00';
+        else if (i < playerInput2.length) ctx.fillStyle = '#00ff00';
+        else ctx.fillStyle = '#666';
+
+        ctx.fillText(minigame2Sequence[i].toUpperCase(), windowX + xOffset + (i%12)*itemWidth, windowY + yOffset + Math.floor(i/12)*36);
+      }
+
+      // Timer and progress
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.fillText('Progress: ' + playerInput2.length + '/' + minigame2Sequence.length, windowX + 20, windowY + 320);
+      ctx.font = 'bold 18px Arial';
+      ctx.fillStyle = minigame2Timer <= 5 ? '#ff0000' : '#00ff00';
+      ctx.fillText('Time: ' + Math.max(0, Math.ceil(minigame2Timer)) + 's', windowX + 20, windowY + 350);
+
+      if (minigame2Won) {
+        ctx.fillStyle = 'rgba(0,255,0,0.3)';
+        ctx.fillRect(windowX + 40, windowY + 190, 540, 80);
+        ctx.fillStyle = '#00ff00';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('Nice! You completed Mini-game 2!', windowX + 80, windowY + 235);
+      }
+
+      if (minigame2Lost) {
+        ctx.fillStyle = 'rgba(255,0,0,0.3)';
+        ctx.fillRect(windowX + 40, windowY + 190, 540, 80);
+        ctx.fillStyle = '#ff4444';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('Failed — try again (Press T)', windowX + 140, windowY + 235);
+      }
+    }
+  }
 }
 
-// Main game loop
-function loop() {
-  update();
+// Main game loop (use timestamp to compute dt)
+function loop(now) {
+  if (!lastTime) lastTime = now;
+  const dt = now - lastTime;
+  update(dt);
   draw();
+  lastTime = now;
   requestAnimationFrame(loop);
 }
 </script>
