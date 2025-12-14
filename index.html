@@ -272,7 +272,7 @@ if (nearCheckpoint) {
   ctx.fillStyle = 'white';
   ctx.font = '16px Arial';
   ctx.fillText('Press C to enter Classroom 1', checkpoint.x + 10, checkpoint.y - 45);
-  ctx.fillText('Press M to enter MKS', checkpoint.x + 10, checkpoint.y - 25);
+  ctx.fillText('Press M to enter Makerspace', checkpoint.x + 10, checkpoint.y - 25);
 }
 
   // Show newsletter prompt when near
@@ -314,6 +314,32 @@ if (nearCheckpoint) {
     ctx.font = '14px Arial';
     ctx.fillText('Press E to close', 20, 40);
   }
+
+  // Game instructions at bottom right
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(canvas.width - 270, canvas.height - 160, 300, 160);
+  ctx.fillStyle = 'white';
+  ctx.font = '12px Arial';
+  
+
+  ctx.fillText('Use W(UP), A(LEFT), S(DOWN), D(RIGHT)', canvas.width - 260, canvas.height - 140);
+  ctx.fillText('to move the character', canvas.width - 260, canvas.height - 125);
+  
+  
+  ctx.fillText('The checkpoint to enter a new map is', canvas.width - 260, canvas.height - 110);
+  ctx.fillText('located at the table.', canvas.width - 260, canvas.height - 95);
+  
+
+  ctx.fillText('In each new map, you can explore and', canvas.width - 260, canvas.height - 80);
+  ctx.fillText('discover new things by yourself', canvas.width - 260, canvas.height - 65);
+  
+
+  ctx.fillText('The game is still updating', canvas.width - 260, canvas.height - 50);
+  ctx.fillText('so don\'t hesitate to give us feedback', canvas.width - 260, canvas.height - 35);
+  
+
+  ctx.fillText('We wish you a warm Christmas with', canvas.width - 260, canvas.height - 20);
+  ctx.fillText('your loved ones <3', canvas.width - 260, canvas.height - 5);
 }
 
 // Main loop
