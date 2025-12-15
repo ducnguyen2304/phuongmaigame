@@ -155,17 +155,17 @@ let nearCheckpoint = null;
 let musicStarted = false;
 
 // Tobias checkpoint
-const tobiasBurger = { x: 70, y: 250, triggerDistance: 100, sound: new Audio('sound/tobias.mp3'), played: false };
+const tobiasBurger = { x: 70, y: 250, triggerDistance: 150, sound: new Audio('sound/tobias.mp3'), played: false };
 let nearTobias = false; 
 let tobiasPlayed = false;
 
 // Speed checkpoint
-const SPpeedSound = {x: 1150, y: 675, triggerDistance: 100, sound: new Audio('sound/speed.mp3'), played: false };
+const SPpeedSound = {x: 1150, y: 675, triggerDistance: 150, sound: new Audio('sound/speed.mp3'), played: false };
 let nearSpeed = false;
 let speedPlayed = false;
 
 // mu checkpoint
-const muSound = {x:940, y:496, triggerDistance:100, sound: new Audio('sound/mu.mp3'), played:false};
+const muSound = {x:940, y:496, triggerDistance:150, sound: new Audio('sound/mu.mp3'), played:false};
 let nearMu = false;
 let muPlayed = false;
 const muImg = new Image();
@@ -178,13 +178,13 @@ const linhhuyhnhImg = new Image();
 linhhuyhnhImg.src = 'asset/linhhuynh.png';
 
 // Lan checkpoint - displays image bubble
-const lan = { x: 1300, y: 225, triggerDistance: 100 };
+const lan = { x: 1300, y: 225, triggerDistance: 150 };
 let nearLan = false;
 const lanImg = new Image();
 lanImg.src = 'asset/lan.png';
 
 // Nathan checkpoint - displays image bubble
-const nathan = { x: 1414, y: 190, triggerDistance: 100 };
+const nathan = { x: 1414, y: 190, triggerDistance: 150 };
 let nearNathan = false;
 const nathanImg = new Image();
 nathanImg.src = 'asset/nathan.png';
@@ -474,12 +474,14 @@ document.addEventListener('keydown', e => {
   keys[key] = true;
   keys[e.code] = true; // Also store by key code for different layouts
 
-  // Don't prevent arrow keys anymore since we support them
+  // Prevent arrow keys from scrolling the page
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
-    // Allow arrow keys for movement now
+    e.preventDefault();
   }
 
-  if (e.key === 'h') {
+  const interactionKey = e.key.toLowerCase(); // Handle case sensitivity
+
+  if (interactionKey === 'h') {
     if (nearCheckpoint) {
       playCheckpointSound(nearCheckpoint.sound);
       nearCheckpoint.played = true;
@@ -503,7 +505,7 @@ document.addEventListener('keydown', e => {
     }
   }
 
-  if (e.key === 'e') {
+  if (interactionKey === 'e') {
     // Primary mini-game (near miniGame)
     if (nearMiniGame && !minigameOpen) {
       trackEvent('minigame');
@@ -527,7 +529,7 @@ document.addEventListener('keydown', e => {
   }
 
   // Retry mini-game with T key
-  if (e.key === 't') {
+  if (interactionKey === 't') {
     if (minigameOpen && (minigameWon || minigameLost)) initMiniGame();
     if (minigame2Open && (minigame2Won || minigame2Lost)) initMiniGame2();
   }
@@ -537,8 +539,8 @@ document.addEventListener('keydown', e => {
     let pressedShortcut = null;
 
     if (e.ctrlKey) {
-      if (e.key === 'c') pressedShortcut = 'Ctrl+C';
-      else if (e.key === 'v') pressedShortcut = 'Ctrl+V';
+      if (interactionKey === 'c') pressedShortcut = 'Ctrl+C';
+      else if (interactionKey === 'v') pressedShortcut = 'Ctrl+V';
     }
 
     if (pressedShortcut) {
@@ -559,7 +561,7 @@ document.addEventListener('keydown', e => {
 
   // Second mini-game input: Spacebar to stabilize
   if (minigame2Open && minigame2Started && !minigame2Won && !minigame2Lost && !stabStopped) {
-    if (e.key === ' ' || e.code === 'Space') {
+    if (interactionKey === ' ' || e.code === 'Space') {
       e.preventDefault();
       stabStopped = true;
       // Check if within safe zone
@@ -593,10 +595,10 @@ function update(dt) {
   let newY = player.y;
 
   // Movement with multiple key support for different keyboards
-  if (keys['w'] || keys['KeyW'] || keys['ArrowUp']) newY -= player.speed;
-  if (keys['s'] || keys['KeyS'] || keys['ArrowDown']) newY += player.speed;
-  if (keys['a'] || keys['KeyA'] || keys['ArrowLeft']) newX -= player.speed;
-  if (keys['d'] || keys['KeyD'] || keys['ArrowRight']) newX += player.speed;
+  if (keys['w'] || keys['KeyW'] || keys['arrowup']) newY -= player.speed;
+  if (keys['s'] || keys['KeyS'] || keys['arrowdown']) newY += player.speed;
+  if (keys['a'] || keys['KeyA'] || keys['arrowleft']) newX -= player.speed;
+  if (keys['d'] || keys['KeyD'] || keys['arrowright']) newX += player.speed;
 
   if (!collides(newX, player.y)) player.x = newX;
   if (!collides(player.x, newY)) player.y = newY;
@@ -609,14 +611,14 @@ function update(dt) {
   checkCheckpoints();
 
   // Animation update
-  isMoving = !!(keys['w'] || keys['KeyW'] || keys['ArrowUp'] || 
-                keys['a'] || keys['KeyA'] || keys['ArrowLeft'] || 
-                keys['s'] || keys['KeyS'] || keys['ArrowDown'] || 
-                keys['d'] || keys['KeyD'] || keys['ArrowRight']);
+  isMoving = !!(keys['w'] || keys['KeyW'] || keys['arrowup'] || 
+                keys['a'] || keys['KeyA'] || keys['arrowleft'] || 
+                keys['s'] || keys['KeyS'] || keys['arrowdown'] || 
+                keys['d'] || keys['KeyD'] || keys['arrowright']);
   // determine horizontal direction preference
   let horiz = lastDirection;
-  if ((keys['a'] || keys['KeyA'] || keys['ArrowLeft']) && !(keys['d'] || keys['KeyD'] || keys['ArrowRight'])) horiz = 'left';
-  else if ((keys['d'] || keys['KeyD'] || keys['ArrowRight']) && !(keys['a'] || keys['KeyA'] || keys['ArrowLeft'])) horiz = 'right';
+  if ((keys['a'] || keys['KeyA'] || keys['arrowleft']) && !(keys['d'] || keys['KeyD'] || keys['arrowright'])) horiz = 'left';
+  else if ((keys['d'] || keys['KeyD'] || keys['arrowright']) && !(keys['a'] || keys['KeyA'] || keys['arrowleft'])) horiz = 'right';
 
   // reset anim when direction changes
   if (horiz !== lastDirection) {
