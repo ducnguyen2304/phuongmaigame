@@ -382,29 +382,24 @@ if (nearCheckpoint) {
 
   // Game instructions at bottom right
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(canvas.width - 270, canvas.height - 160, 300, 160);
+  ctx.fillRect(canvas.width - 320, canvas.height - 220, 310, 210);
   ctx.fillStyle = 'white';
-  ctx.font = '12px Arial';
+  ctx.font = '14px Arial';
   
+  ctx.fillText('Instructions:', canvas.width - 310, canvas.height - 200);
+   
+  ctx.fillText('Use W(Up), A(Left), S(Down), D(Right)', canvas.width - 310, canvas.height - 178);
+  ctx.fillText('or Arrow Keys to move the character.', canvas.width - 310, canvas.height - 160);
+  
+  ctx.fillText('The checkpoint to enter a new map', canvas.width - 310, canvas.height - 138);
+  ctx.fillText('is located at the table.', canvas.width - 310, canvas.height - 120);
 
-  ctx.fillText('Use W(UP), A(LEFT), S(DOWN), D(RIGHT)', canvas.width - 260, canvas.height - 140);
-  ctx.fillText('or Arrow Keys to move the character', canvas.width - 260, canvas.height - 125);
-  
-  
-  ctx.fillText('The checkpoint to enter a new map is', canvas.width - 260, canvas.height - 110);
-  ctx.fillText('located at the table.', canvas.width - 260, canvas.height - 95);
-  
+  ctx.fillText('In each new map, there will also be many', canvas.width - 310, canvas.height - 98);
+  ctx.fillText('other checkpoints. We encourage you to', canvas.width - 310, canvas.height - 80);
+  ctx.fillText('explore and discover them yourself.', canvas.width - 310, canvas.height - 62);
 
-  ctx.fillText('In each new map, you can explore and', canvas.width - 260, canvas.height - 80);
-  ctx.fillText('discover new things by yourself', canvas.width - 260, canvas.height - 65);
-  
-
-  ctx.fillText('The game is still updating', canvas.width - 260, canvas.height - 50);
-  ctx.fillText('so don\'t hesitate to give us feedback', canvas.width - 260, canvas.height - 35);
-  
-
-  ctx.fillText('We wish you a warm Christmas with', canvas.width - 260, canvas.height - 20);
-  ctx.fillText('your loved ones <3', canvas.width - 260, canvas.height - 5);
+  ctx.fillText('We wish you a warm Christmas', canvas.width - 310, canvas.height - 38);
+  ctx.fillText('with your loved ones <3', canvas.width - 310, canvas.height - 20);
 }
 
 // Main loop
