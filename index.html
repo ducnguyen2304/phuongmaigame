@@ -226,6 +226,9 @@ document.addEventListener('keydown', e => {
     window.location.href = 'mks.html';  // Navigate to mks
   }
   if (key === 'e' && nearNewsletter) {
+    if (!newsletterOpen && window.goatcounter) {
+      window.goatcounter.count({ path: '/newsletter-opened', event: true });
+    }
     newsletterOpen = !newsletterOpen;  // Toggle newsletter
   }
 });
