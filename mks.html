@@ -368,9 +368,23 @@
     // PDF hearty plant
     const HEARTY_PDF = "docs/Convocation-2025-Hearty-Plant.pdf";
 
-    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    function resizeCanvas() { 
+      canvas.width = window.innerWidth; 
+      canvas.height = window.innerHeight;
+      canvas.focus(); // Re-focus after resize
+    }
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+
+    // Make canvas focusable and ensure it captures keyboard events
+    canvas.tabIndex = 1;
+    canvas.style.outline = 'none'; // Remove focus outline
+    canvas.focus(); // Auto-focus the canvas
+
+    // Re-focus canvas when clicked (in case user clicks elsewhere)
+    canvas.addEventListener('click', () => {
+      canvas.focus();
+    });
 
     // --- Assets (background, idle char, and 6 walking frames)
     const bg = new Image();
@@ -798,6 +812,7 @@
     document.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       keys[k] = true;
+      keys[e.code] = true; // Also store by key code for different layouts
 
       startBGIfNeeded();
 
@@ -811,9 +826,13 @@
       if (overlayOpen) return;
 
       if (nearInteraction && k === nearInteraction.key) nearInteraction.onTrigger();
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+      // Don't prevent arrow keys since we support them for movement now
     });
-    document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+    document.addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase();
+      keys[k] = false;
+      keys[e.code] = false;
+    });
 
     // --- Collision detection
     function collides(px, py) {
@@ -1550,10 +1569,11 @@
 
       let newX = player.x;
       let newY = player.y;
-      if (keys['w']) newY -= player.speed;
-      if (keys['s']) newY += player.speed;
-      if (keys['a']) newX -= player.speed;
-      if (keys['d']) newX += player.speed;
+      // Movement with multiple key support for different keyboards
+      if (keys['w'] || keys['KeyW'] || keys['arrowup']) newY -= player.speed;
+      if (keys['s'] || keys['KeyS'] || keys['arrowdown']) newY += player.speed;
+      if (keys['a'] || keys['KeyA'] || keys['arrowleft']) newX -= player.speed;
+      if (keys['d'] || keys['KeyD'] || keys['arrowright']) newX += player.speed;
 
       if (!collides(newX, player.y)) player.x = newX;
       if (!collides(player.x, newY)) player.y = newY;
@@ -1562,11 +1582,14 @@
       computeNearInteraction();
 
       // Animation update
-      isMoving = !!(keys['w'] || keys['a'] || keys['s'] || keys['d']);
+      isMoving = !!(keys['w'] || keys['KeyW'] || keys['arrowup'] || 
+                    keys['a'] || keys['KeyA'] || keys['arrowleft'] || 
+                    keys['s'] || keys['KeyS'] || keys['arrowdown'] || 
+                    keys['d'] || keys['KeyD'] || keys['arrowright']);
       // determine horizontal direction preference
       let horiz = lastDirection;
-      if (keys['a'] && !keys['d']) horiz = 'left';
-      else if (keys['d'] && !keys['a']) horiz = 'right';
+      if ((keys['a'] || keys['KeyA'] || keys['arrowleft']) && !(keys['d'] || keys['KeyD'] || keys['arrowright'])) horiz = 'left';
+      else if ((keys['d'] || keys['KeyD'] || keys['arrowright']) && !(keys['a'] || keys['KeyA'] || keys['arrowleft'])) horiz = 'right';
 
       // reset anim when direction changes
       if (horiz !== lastDirection) {
