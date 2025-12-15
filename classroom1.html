@@ -2,6 +2,8 @@
 <html>
 <head>
 <title>game phuong mai</title>
+<script data-goatcounter="https://ducnguyen.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 <style>
 * { margin: 0; padding: 0; overflow: hidden; }
 body { background: #000; opacity: 0; transition: opacity 1s; }
@@ -20,41 +22,6 @@ canvas { display: block; pointer-events: none; }
 <button id="backBtn" onclick="window.location.href='index.html'">← Return to Common Area</button>
 <canvas id="classroom1"></canvas>
 <script>
-// Analytics tracking functions
-function trackPageView(pageName) {
-  const key = 'analytics_' + pageName + '_views';
-  const count = parseInt(localStorage.getItem(key) || '0') + 1;
-  localStorage.setItem(key, count);
-  logEvent('Page View', pageName);
-}
-
-function trackEvent(eventName) {
-  const key = 'analytics_' + eventName + '_clicks';
-  const count = parseInt(localStorage.getItem(key) || '0') + 1;
-  localStorage.setItem(key, count);
-  logEvent(eventName.replace('_', ' ').toUpperCase(), getCurrentPage());
-}
-
-function logEvent(action, page) {
-  const eventLog = JSON.parse(localStorage.getItem('analytics_event_log') || '[]');
-  eventLog.push({
-    timestamp: new Date().toLocaleString(),
-    action: action,
-    page: page
-  });
-  if (eventLog.length > 100) {
-    eventLog.splice(0, eventLog.length - 100);
-  }
-  localStorage.setItem('analytics_event_log', JSON.stringify(eventLog));
-}
-
-function getCurrentPage() {
-  return 'classroom1.html';
-}
-
-// Track page view on load
-trackPageView('classroom');
-
 setTimeout(() => document.body.style.opacity = '1', 10);
 
 const canvas = document.getElementById('classroom1');
@@ -508,7 +475,6 @@ document.addEventListener('keydown', e => {
   if (interactionKey === 'e') {
     // Primary mini-game (near miniGame)
     if (nearMiniGame && !minigameOpen) {
-      trackEvent('minigame');
       minigameOpen = true;
       initMiniGame();
     } else if (minigameOpen) {
@@ -518,7 +484,6 @@ document.addEventListener('keydown', e => {
 
     // Secondary mini-game (near miniGame2)
     if (nearMiniGame2 && !minigame2Open && !minigameOpen) {
-      trackEvent('minigame');
       minigame2Open = true;
       initMiniGame2();
     } else if (minigame2Open && !nearMiniGame) {
