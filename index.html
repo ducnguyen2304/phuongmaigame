@@ -161,8 +161,13 @@ let isMusicEnabled = true;
 document.addEventListener(
   'keydown',
   (e) => {
-    // Only treat control keys as valid gestures
-    if (!['w', 'a', 's', 'd', 'e', 'c', 'm'].includes(e.key)) return;
+    // Only treat control keys as valid gestures - case insensitive (including arrow keys)
+    const key = e.key.toLowerCase();
+    const isMovementKey = ['w', 'a', 's', 'd'].includes(key) || 
+                          ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
+    const isInteractionKey = ['e', 'c', 'm'].includes(key);
+    
+    if (!isMovementKey && !isInteractionKey) return;
 
     if (bgMusic.paused && isMusicEnabled) {
       bgMusic.play().catch(err => {
@@ -231,10 +236,9 @@ function checkCheckpoint() {
 
 // Input handling 
 document.addEventListener('keydown', e => {
-  // Block arrow keys from scrolling / doing anything
+  // Prevent arrow keys from scrolling the page
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
     e.preventDefault();
-    return;
   }
   // Convert to lowercase for consistency and add key code support
   const key = e.key.toLowerCase();
@@ -250,13 +254,14 @@ document.addEventListener('keyup', e => {
 
 // Navigation and interaction
 document.addEventListener('keydown', e => {
-  if (e.key === 'c' && nearCheckpoint) {
+  const key = e.key.toLowerCase(); // Handle case sensitivity
+  if (key === 'c' && nearCheckpoint) {
     window.location.href = 'classroom1.html';  // Navigate to classroom1
   }
-  if (e.key === 'm' && nearCheckpoint) {
+  if (key === 'm' && nearCheckpoint) {
     window.location.href = 'mks.html';  // Navigate to mks
   }
-  if (e.key === 'e' && nearNewsletter) {
+  if (key === 'e' && nearNewsletter) {
     if (!newsletterOpen) trackEvent('newsletter');
     newsletterOpen = !newsletterOpen;  // Toggle newsletter
   }
@@ -269,10 +274,10 @@ function update(dt) {
   let newY = player.y;
 
   // Movement with multiple key support for different keyboards
-  if (keys['w'] || keys['KeyW'] || keys['ArrowUp']) newY -= player.speed;
-  if (keys['s'] || keys['KeyS'] || keys['ArrowDown']) newY += player.speed;
-  if (keys['a'] || keys['KeyA'] || keys['ArrowLeft']) newX -= player.speed;
-  if (keys['d'] || keys['KeyD'] || keys['ArrowRight']) newX += player.speed;
+  if (keys['w'] || keys['KeyW'] || keys['arrowup']) newY -= player.speed;
+  if (keys['s'] || keys['KeyS'] || keys['arrowdown']) newY += player.speed;
+  if (keys['a'] || keys['KeyA'] || keys['arrowleft']) newX -= player.speed;
+  if (keys['d'] || keys['KeyD'] || keys['arrowright']) newX += player.speed;
 
   if (!collides(newX, player.y)) player.x = newX;
   if (!collides(player.x, newY)) player.y = newY;
@@ -284,14 +289,14 @@ function update(dt) {
   checkCheckpoint();
 
   // Animation update
-  isMoving = !!(keys['w'] || keys['KeyW'] || keys['ArrowUp'] || 
-                keys['a'] || keys['KeyA'] || keys['ArrowLeft'] || 
-                keys['s'] || keys['KeyS'] || keys['ArrowDown'] || 
-                keys['d'] || keys['KeyD'] || keys['ArrowRight']);
+  isMoving = !!(keys['w'] || keys['KeyW'] || keys['arrowup'] || 
+                keys['a'] || keys['KeyA'] || keys['arrowleft'] || 
+                keys['s'] || keys['KeyS'] || keys['arrowdown'] || 
+                keys['d'] || keys['KeyD'] || keys['arrowright']);
   // determine horizontal direction preference
   let horiz = lastDirection;
-  if ((keys['a'] || keys['KeyA'] || keys['ArrowLeft']) && !(keys['d'] || keys['KeyD'] || keys['ArrowRight'])) horiz = 'left';
-  else if ((keys['d'] || keys['KeyD'] || keys['ArrowRight']) && !(keys['a'] || keys['KeyA'] || keys['ArrowLeft'])) horiz = 'right';
+  if ((keys['a'] || keys['KeyA'] || keys['arrowleft']) && !(keys['d'] || keys['KeyD'] || keys['arrowright'])) horiz = 'left';
+  else if ((keys['d'] || keys['KeyD'] || keys['arrowright']) && !(keys['a'] || keys['KeyA'] || keys['arrowleft'])) horiz = 'right';
 
   // reset anim when direction changes
   if (horiz !== lastDirection) {
@@ -383,7 +388,7 @@ if (nearCheckpoint) {
   
 
   ctx.fillText('Use W(UP), A(LEFT), S(DOWN), D(RIGHT)', canvas.width - 260, canvas.height - 140);
-  ctx.fillText('to move the character around the map', canvas.width - 260, canvas.height - 125);
+  ctx.fillText('or Arrow Keys to move the character', canvas.width - 260, canvas.height - 125);
   
   
   ctx.fillText('The checkpoint to enter a new map is', canvas.width - 260, canvas.height - 110);
