@@ -2,6 +2,8 @@
 <html>
 <head>
 <title>game phuong mai</title>
+<script data-goatcounter="https://ducnguyen.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 <style>
 * { margin: 0; padding: 0; overflow: hidden; }
 body { background: #000; }
@@ -19,42 +21,6 @@ canvas { display: block; pointer-events: none; }
 <button id="feedbackBtn">📝 Feedback Form</button>
 <canvas id="common_area"></canvas>
 <script>
-// Analytics tracking functions
-function trackPageView(pageName) {
-  const key = 'analytics_' + pageName + '_views';
-  const count = parseInt(localStorage.getItem(key) || '0') + 1;
-  localStorage.setItem(key, count);
-  logEvent('Page View', pageName);
-}
-
-function trackEvent(eventName) {
-  const key = 'analytics_' + eventName + '_clicks';
-  const count = parseInt(localStorage.getItem(key) || '0') + 1;
-  localStorage.setItem(key, count);
-  logEvent(eventName.replace('_', ' ').toUpperCase(), getCurrentPage());
-}
-
-function logEvent(action, page) {
-  const eventLog = JSON.parse(localStorage.getItem('analytics_event_log') || '[]');
-  eventLog.push({
-    timestamp: new Date().toLocaleString(),
-    action: action,
-    page: page
-  });
-  // Keep only last 100 events
-  if (eventLog.length > 100) {
-    eventLog.splice(0, eventLog.length - 100);
-  }
-  localStorage.setItem('analytics_event_log', JSON.stringify(eventLog));
-}
-
-function getCurrentPage() {
-  return 'index.html';
-}
-
-// Track page view on load
-trackPageView('index');
-
 const canvas = document.getElementById('common_area');
 const ctx = canvas.getContext('2d');
 const coords = document.getElementById('coords');
@@ -181,7 +147,6 @@ document.addEventListener(
 // Music toggle button functionality
 const musicBtn = document.getElementById('musicBtn');
 musicBtn.addEventListener('click', () => {
-  trackEvent('music');
   isMusicEnabled = !isMusicEnabled;
   if (isMusicEnabled) {
     bgMusic.play().catch(() => {});
@@ -195,7 +160,6 @@ musicBtn.addEventListener('click', () => {
 // Feedback button functionality
 const feedbackBtn = document.getElementById('feedbackBtn');
 feedbackBtn.addEventListener('click', () => {
-  trackEvent('feedback');
   window.open('https://docs.google.com/forms/d/e/1FAIpQLSflYPOSMXIHMsTg1yjtbUCtOVNrtUJV9_OQYcvg6fLb85r2NA/viewform', '_blank');
 });
 
@@ -262,7 +226,6 @@ document.addEventListener('keydown', e => {
     window.location.href = 'mks.html';  // Navigate to mks
   }
   if (key === 'e' && nearNewsletter) {
-    if (!newsletterOpen) trackEvent('newsletter');
     newsletterOpen = !newsletterOpen;  // Toggle newsletter
   }
 });
