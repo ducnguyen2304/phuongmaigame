@@ -607,6 +607,9 @@
 
     // BIG PDF VIEWER for Hearty Plant
     function openHeartyPDF() {
+      if (window.goatcounter) {
+        window.goatcounter.count({ path: '/hearty-pdf-opened', event: true });
+      }
       openOverlay("Hearty Plant — Info", () => {
         overlayBody.innerHTML = `
           <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start;">
@@ -650,6 +653,9 @@
         `;
 
         overlayBody.querySelector("#openPdfNewTab").onclick = () => {
+          if (window.goatcounter) {
+            window.goatcounter.count({ path: '/hearty-pdf-new-tab', event: true });
+          }
           window.open(HEARTY_PDF, "_blank");
         };
       });
@@ -688,6 +694,9 @@
           key: "v",
           prompt: "Press V to turn on the TV",
           onTrigger: () => {
+            if (window.goatcounter) {
+              window.goatcounter.count({ path: '/tv-poster-viewed', event: true });
+            }
             openOverlay("Innovation Bootcamp Info", () => {
               overlayBody.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;">
