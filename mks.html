@@ -814,6 +814,11 @@
       keys[k] = true;
       keys[e.code] = true; // Also store by key code for different layouts
 
+      // Prevent arrow keys from scrolling the page
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+      }
+
       startBGIfNeeded();
 
       if (k === "escape") {
@@ -826,7 +831,6 @@
       if (overlayOpen) return;
 
       if (nearInteraction && k === nearInteraction.key) nearInteraction.onTrigger();
-      // Don't prevent arrow keys since we support them for movement now
     });
     document.addEventListener('keyup', (e) => {
       const k = e.key.toLowerCase();
