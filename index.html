@@ -60,9 +60,21 @@ const ctx = canvas.getContext('2d');
 const coords = document.getElementById('coords');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+// Make canvas focusable and ensure it captures keyboard events
+canvas.tabIndex = 1;
+canvas.style.outline = 'none'; // Remove focus outline
+canvas.focus(); // Auto-focus the canvas
+
+// Re-focus canvas when clicked (in case user clicks elsewhere)
+canvas.addEventListener('click', () => {
+  canvas.focus();
+});
+
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  canvas.focus(); // Re-focus after resize
 });
 
 // Image and asset loading
@@ -224,11 +236,16 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     return;
   }
-  keys[e.key] = true;
+  // Convert to lowercase for consistency and add key code support
+  const key = e.key.toLowerCase();
+  keys[key] = true;
+  keys[e.code] = true; // Also store by key code for different layouts
 });
 
 document.addEventListener('keyup', e => {
-  keys[e.key] = false;
+  const key = e.key.toLowerCase();
+  keys[key] = false;
+  keys[e.code] = false;
 });
 
 // Navigation and interaction
@@ -251,10 +268,11 @@ function update(dt) {
   let newX = player.x;
   let newY = player.y;
 
-  if (keys['w']) newY -= player.speed;
-  if (keys['s']) newY += player.speed;
-  if (keys['a']) newX -= player.speed;
-  if (keys['d']) newX += player.speed;
+  // Movement with multiple key support for different keyboards
+  if (keys['w'] || keys['KeyW'] || keys['ArrowUp']) newY -= player.speed;
+  if (keys['s'] || keys['KeyS'] || keys['ArrowDown']) newY += player.speed;
+  if (keys['a'] || keys['KeyA'] || keys['ArrowLeft']) newX -= player.speed;
+  if (keys['d'] || keys['KeyD'] || keys['ArrowRight']) newX += player.speed;
 
   if (!collides(newX, player.y)) player.x = newX;
   if (!collides(player.x, newY)) player.y = newY;
@@ -266,11 +284,14 @@ function update(dt) {
   checkCheckpoint();
 
   // Animation update
-  isMoving = !!(keys['w'] || keys['a'] || keys['s'] || keys['d']);
+  isMoving = !!(keys['w'] || keys['KeyW'] || keys['ArrowUp'] || 
+                keys['a'] || keys['KeyA'] || keys['ArrowLeft'] || 
+                keys['s'] || keys['KeyS'] || keys['ArrowDown'] || 
+                keys['d'] || keys['KeyD'] || keys['ArrowRight']);
   // determine horizontal direction preference
   let horiz = lastDirection;
-  if (keys['a'] && !keys['d']) horiz = 'left';
-  else if (keys['d'] && !keys['a']) horiz = 'right';
+  if ((keys['a'] || keys['KeyA'] || keys['ArrowLeft']) && !(keys['d'] || keys['KeyD'] || keys['ArrowRight'])) horiz = 'left';
+  else if ((keys['d'] || keys['KeyD'] || keys['ArrowRight']) && !(keys['a'] || keys['KeyA'] || keys['ArrowLeft'])) horiz = 'right';
 
   // reset anim when direction changes
   if (horiz !== lastDirection) {
@@ -361,8 +382,8 @@ if (nearCheckpoint) {
   ctx.font = '12px Arial';
   
 
-  ctx.fillText('Use W(UP), A(LEFT), S(DOWN), D(RIGHT)', canvas.width - 260, canvas.height - 140);
-  ctx.fillText('to move the character', canvas.width - 260, canvas.height - 125);
+  ctx.fillText('Use WASD or Arrow Keys to move', canvas.width - 260, canvas.height - 140);
+  ctx.fillText('the character around the map', canvas.width - 260, canvas.height - 125);
   
   
   ctx.fillText('The checkpoint to enter a new map is', canvas.width - 260, canvas.height - 110);
