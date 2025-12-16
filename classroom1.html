@@ -1085,6 +1085,45 @@ function loop(now) {
   lastTime = now;
   requestAnimationFrame(loop);
 }
+
+// Cookie banner functionality
+function loadGA() {
+  var s = document.createElement("script");
+  s.async = true;
+  s.src = "https://www.googletagmanager.com/gtag/js?id=G-T1XYR8PXPN";
+  document.head.appendChild(s);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-T1XYR8PXPN');
+}
+
+function acceptCookies() {
+  localStorage.setItem("ga_consent", "yes");
+  document.getElementById("cookie-banner").style.display = "none";
+  loadGA();
+}
+
+// Auto-load if already accepted before
+if (localStorage.getItem("ga_consent") === "yes") {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById("cookie-banner").style.display = "none";
+    loadGA();
+  });
+}
 </script>
+
+<div id="cookie-banner"
+     style="position:fixed;bottom:0;left:0;right:0;
+            background:#222;color:#fff;padding:12px;
+            text-align:center;z-index:9999;">
+  This site uses cookies for anonymous analytics.
+  <button onclick="acceptCookies()"
+          style="margin-left:10px;">
+    Accept
+  </button>
+</div>
+
 </body>
 </html>
