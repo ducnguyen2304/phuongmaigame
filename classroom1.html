@@ -156,14 +156,10 @@ let nearNathan = false;
 const nathanImg = new Image();
 nathanImg.src = 'asset/nathan.png';
 
-// Mini-game checkpointf
-const miniGame = { x: 523, y: 472, triggerDistance: 150 };
-let nearMiniGame = false;
+// All mini-games checkpoint (merged into one location)
+const miniGameCheckpoint = { x: 721, y: 211, triggerDistance: 150 };
+let nearMiniGameCheckpoint = false;
 let minigameOpen = false;
-
-// Second mini-game checkpoint
-const miniGame2 = { x: 721, y: 211, triggerDistance: 150 };
-let nearMiniGame2 = false;
 let minigame2Open = false;
 
 // Mini-game state
@@ -224,6 +220,172 @@ function initMiniGame2() {
   stabSafeZoneEnd = stabSafeZoneStart + 0.04; // 4% width safe zone 
 }
 
+// ===== THIRD MINI-GAME: 2D SHOOTER (Chicken Invaders style) =====
+let minigame3Open = false;
+let minigame3Started = false;
+let minigame3ShowingInstructions = true; // Show instruction screen first
+let minigame3Won = false;
+let minigame3Lost = false;
+let minigame3LoseReason = ''; // 'timeout' or 'police'
+let minigame3Score = 0;
+let minigame3Lives = 3;
+let minigame3Timer = 60; // 60 seconds game
+
+// Shooter game assets
+const shooterBg = new Image();
+shooterBg.src = 'asset/universe.jpg';
+const instruction3Img = new Image();
+instruction3Img.src = 'asset/instruction3.png';
+const shooterPlayer = new Image();
+shooterPlayer.src = 'asset/pikamchu.png';
+const shooterBullet = new Image();
+shooterBullet.src = 'asset/electric.png';
+const shooterTarget = new Image();
+shooterTarget.src = 'asset/dan.png';
+const shooterHazard = new Image();
+shooterHazard.src = 'asset/police.png';
+
+// Shooter game state
+let shooterX = 0; // player X position
+let shooterBullets = []; // {x, y}
+let shooterTargets = []; // {x, y, type: 'target' | 'hazard'}
+let shooterKeys = { left: false, right: false };
+let shooterSpawnTimer = 0;
+let shooterCanShoot = true;
+let shooterShootCooldown = 0;
+
+// Initialize third mini-game (2D shooter)
+const SHOOTER_WIN_SCORE = 150; // Score needed to win
+function initMiniGame3() {
+  minigame3Started = true;
+  minigame3Won = false;
+  minigame3Lost = false;
+  minigame3LoseReason = '';
+  minigame3Score = 0;
+  minigame3Timer = 30; // 45 seconds to reach target score
+  shooterX = 290; // center of game area
+  shooterBullets = [];
+  shooterTargets = [];
+  shooterKeys = { left: false, right: false };
+  shooterSpawnTimer = 0;
+  shooterCanShoot = true;
+  shooterShootCooldown = 0;
+}
+
+// Update shooter game logic
+function updateShooterGame(dt) {
+  if (!minigame3Started || minigame3Won || minigame3Lost) return;
+  
+  const dtSec = dt / 1000;
+  
+  // Update timer
+  minigame3Timer -= dtSec;
+  if (minigame3Timer <= 0) {
+    minigame3Timer = 0;
+    // Check if player reached the goal
+    if (minigame3Score >= SHOOTER_WIN_SCORE) {
+      minigame3Won = true;
+    } else {
+      minigame3Lost = true;
+      minigame3LoseReason = 'timeout'; // Time's up and didn't reach goal
+    }
+    return;
+  }
+  
+  // Player movement
+  const moveSpeed = 300; // pixels per second
+  if (shooterKeys.left) shooterX -= moveSpeed * dtSec;
+  if (shooterKeys.right) shooterX += moveSpeed * dtSec;
+  
+  // Keep player in bounds (game area is 750 wide, player is 70 wide)
+  if (shooterX < 0) shooterX = 0;
+  if (shooterX > 680) shooterX = 680;
+  
+  // Shoot cooldown
+  if (!shooterCanShoot) {
+    shooterShootCooldown -= dtSec;
+    if (shooterShootCooldown <= 0) {
+      shooterCanShoot = true;
+    }
+  }
+  
+  // Update bullets
+  for (let i = shooterBullets.length - 1; i >= 0; i--) {
+    shooterBullets[i].y -= 400 * dtSec; // bullet speed
+    if (shooterBullets[i].y < -30) {
+      shooterBullets.splice(i, 1);
+    }
+  }
+  
+  // Spawn targets
+  shooterSpawnTimer -= dtSec;
+  if (shooterSpawnTimer <= 0) {
+    const isHazard = Math.random() < 0.25; // 25% chance of hazard
+    shooterTargets.push({
+      x: Math.random() * 680,
+      y: -40,
+      type: isHazard ? 'hazard' : 'target'
+    });
+    shooterSpawnTimer = 0.8 + Math.random() * 0.5; // spawn every 0.8-1.3 seconds
+  }
+  
+  // Update targets (fall down)
+  for (let i = shooterTargets.length - 1; i >= 0; i--) {
+    shooterTargets[i].y += 120 * dtSec; // fall speed
+    
+    // Remove if off screen - no penalty for missing targets
+    if (shooterTargets[i].y > 580) {
+      shooterTargets.splice(i, 1);
+    }
+  }
+  
+  // Check bullet-target collisions
+  for (let b = shooterBullets.length - 1; b >= 0; b--) {
+    for (let t = shooterTargets.length - 1; t >= 0; t--) {
+      const bx = shooterBullets[b].x;
+      const by = shooterBullets[b].y;
+      const tx = shooterTargets[t].x;
+      const ty = shooterTargets[t].y;
+      
+      // Simple collision check (40x40 hitboxes)
+      if (bx < tx + 40 && bx + 20 > tx && by < ty + 40 && by + 30 > ty) {
+        // Hit!
+        if (shooterTargets[t].type === 'target') {
+          minigame3Score += 10;
+          // Check win condition immediately
+          if (minigame3Score >= SHOOTER_WIN_SCORE) {
+            minigame3Won = true;
+          }
+        } else {
+          // Hit police - IMMEDIATE LOSS
+          minigame3Lost = true;
+          minigame3LoseReason = 'police';
+        }
+        shooterBullets.splice(b, 1);
+        shooterTargets.splice(t, 1);
+        break;
+      }
+    }
+  }
+  
+  // Lose condition: time runs out before reaching target score
+  if (minigame3Timer <= 0 && minigame3Score < SHOOTER_WIN_SCORE) {
+    minigame3Lost = true;
+  }
+}
+
+// Shoot a bullet
+function shooterShoot() {
+  if (!shooterCanShoot || !minigame3Started || minigame3Won || minigame3Lost) return;
+  
+  shooterBullets.push({
+    x: shooterX + 25, // center of player (70px wide)
+    y: 460 // just above player in larger window
+  });
+  shooterCanShoot = false;
+  shooterShootCooldown = 0.25; // 0.25 second cooldown between shots
+}
+
 // Tobias checkpoint - displays image bubble
 const tobiasCheckpoint = { x: 121, y: 235, triggerDistance: 100};
 let nearTobiasCheckpoint = false;
@@ -252,8 +414,7 @@ function checkCheckpoints() {
   nearLan = false;
   nearNathan = false;
   nearTobiasCheckpoint = false;
-  nearMiniGame = false;
-  nearMiniGame2 = false;
+  nearMiniGameCheckpoint = false;
 
   // Check Jack checkpoint
   checkpoints.forEach(cp => {
@@ -331,20 +492,12 @@ function checkCheckpoints() {
     nearT1 = false;
   }
 
-  // Check Mini-game checkpoint
-  const miniGameDist = Math.hypot(pcx - miniGame.x, pcy - miniGame.y);
-  if (miniGameDist < miniGame.triggerDistance) {
-    nearMiniGame = true;
+  // Check combined mini-game checkpoint
+  const miniGameDist = Math.hypot(pcx - miniGameCheckpoint.x, pcy - miniGameCheckpoint.y);
+  if (miniGameDist < miniGameCheckpoint.triggerDistance) {
+    nearMiniGameCheckpoint = true;
   } else {
-    nearMiniGame = false;
-  }
-
-  // Check second mini-game checkpoint
-  const miniGame2Dist = Math.hypot(pcx - miniGame2.x, pcy - miniGame2.y);
-  if (miniGame2Dist < miniGame2.triggerDistance) {
-    nearMiniGame2 = true;
-  } else {
-    nearMiniGame2 = false;
+    nearMiniGameCheckpoint = false;
   }
 }
 
@@ -473,23 +626,24 @@ document.addEventListener('keydown', e => {
   }
 
   if (interactionKey === 'e') {
-    // Primary mini-game (near miniGame)
-    if (nearMiniGame && !minigameOpen) {
+    // Mini-game 2 (Kera Candy Balance) - from combined checkpoint
+    if (nearMiniGameCheckpoint && !minigame2Open && !minigameOpen && !minigame3Open) {
+      minigame2Open = true;
+      initMiniGame2();
+    } else if (minigame2Open) {
+      minigame2Open = false;
+      minigame2Started = false;
+    }
+  }
+
+  // Mini-game 1 (Assignment shortcuts) - Q key from combined checkpoint
+  if (interactionKey === 'q') {
+    if (nearMiniGameCheckpoint && !minigameOpen && !minigame2Open && !minigame3Open) {
       minigameOpen = true;
       initMiniGame();
     } else if (minigameOpen) {
       minigameOpen = false;
       minigameStarted = false;
-    }
-
-    // Secondary mini-game (near miniGame2)
-    if (nearMiniGame2 && !minigame2Open && !minigameOpen) {
-      minigame2Open = true;
-      initMiniGame2();
-    } else if (minigame2Open && !nearMiniGame) {
-      // allow closing the second mini-game with E as well
-      minigame2Open = false;
-      minigame2Started = false;
     }
   }
 
@@ -537,6 +691,49 @@ document.addEventListener('keydown', e => {
       }
     }
   }
+
+  // Third mini-game trigger: Press R near combined checkpoint
+  if (interactionKey === 'r') {
+    if (nearMiniGameCheckpoint && !minigame3Open && !minigameOpen && !minigame2Open) {
+      minigame3Open = true;
+      minigame3ShowingInstructions = true; // Show instructions first
+      minigame3Started = false;
+    } else if (minigame3Open) {
+      // Close shooter game with R
+      minigame3Open = false;
+      minigame3Started = false;
+      minigame3ShowingInstructions = true;
+      shooterKeys = { left: false, right: false };
+    }
+  }
+
+  // Start game from instruction screen with SPACE or ENTER
+  if (minigame3Open && minigame3ShowingInstructions && (e.code === 'Space' || e.code === 'Enter')) {
+    minigame3ShowingInstructions = false;
+    initMiniGame3();
+    e.preventDefault();
+  }
+
+  // Third mini-game retry with T key
+  if (interactionKey === 't') {
+    if (minigame3Open && (minigame3Won || minigame3Lost)) initMiniGame3();
+  }
+
+  // Third mini-game shooter controls
+  if (minigame3Open && minigame3Started && !minigame3ShowingInstructions && !minigame3Won && !minigame3Lost) {
+    if (e.code === 'ArrowLeft' || interactionKey === 'arrowleft') {
+      shooterKeys.left = true;
+      e.preventDefault();
+    }
+    if (e.code === 'ArrowRight' || interactionKey === 'arrowright') {
+      shooterKeys.right = true;
+      e.preventDefault();
+    }
+    if (e.code === 'Space' || interactionKey === ' ') {
+      e.preventDefault();
+      shooterShoot();
+    }
+  }
 });
 
 // Stop movement on key release
@@ -544,6 +741,16 @@ document.addEventListener('keyup', e => {
   const key = e.key.toLowerCase();
   keys[key] = false;
   keys[e.code] = false;
+
+  // Shooter game key release
+  if (minigame3Open) {
+    if (e.code === 'ArrowLeft' || key === 'arrowleft') {
+      shooterKeys.left = false;
+    }
+    if (e.code === 'ArrowRight' || key === 'arrowright') {
+      shooterKeys.right = false;
+    }
+  }
 });
 
 // Collision detection against furniture
@@ -635,6 +842,11 @@ function update(dt) {
         stabBarDir = 1;
       }
     }
+  }
+
+  // Update third mini-game (2D shooter)
+  if (minigame3Open && minigame3Started && !minigame3ShowingInstructions) {
+    updateShooterGame(dt);
   }
 }
 
@@ -800,22 +1012,17 @@ function draw() {
     ctx.fillText('Who ? (Press H)', player.x - 25, player.y - 12);
   }
 
-  // Draw mini-game prompt when near
-  if (nearMiniGame) {
+  // Draw mini-game prompt when near combined checkpoint
+  if (nearMiniGameCheckpoint) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(player.x - 60, player.y - 30, 180, 25);
-    ctx.fillStyle = 'white';
+    ctx.fillRect(player.x - 60, player.y - 75, 260, 65);
+    ctx.fillStyle = '#ffff00';
     ctx.font = '14px Arial';
-    ctx.fillText('Press E to play mini-game 1', player.x - 50, player.y - 12);
-  }
-
-  // Draw second mini-game prompt when near
-  if (nearMiniGame2) {
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(player.x - 60, player.y - 60, 220, 25);
+    ctx.fillText('Press Q to play keyboard challenge', player.x - 50, player.y - 57);
     ctx.fillStyle = 'white';
-    ctx.font = '14px Arial';
-    ctx.fillText('Press E to play mini-game 2', player.x - 50, player.y - 42);
+    ctx.fillText('Press E to play Kera Candy Balance', player.x - 50, player.y - 37);
+    ctx.fillStyle = '#00ffff';
+    ctx.fillText('Press R to play Cam Internship', player.x - 50, player.y - 17);
   }
 
   // Draw mini-game modal window when open
@@ -959,8 +1166,8 @@ function draw() {
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const windowWidth = 620;
-    const windowHeight = 420;
+    const windowWidth = 720;
+    const windowHeight = 500;
     const windowX = (canvas.width - windowWidth) / 2;
     const windowY = (canvas.height - windowHeight) / 2;
 
@@ -1072,6 +1279,180 @@ function draw() {
       ctx.font = '14px Arial';
       ctx.fillStyle = 'white';
       ctx.fillText('Press T to try again or E to close', windowX + 200, windowY + 220);
+    }
+  }
+
+  // ===== Draw third mini-game (2D Shooter) =====
+  if (minigame3Open) {
+    // Dim the background
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const windowWidth = 750;
+    const windowHeight = 580;
+    const windowX = (canvas.width - windowWidth) / 2;
+    const windowY = (canvas.height - windowHeight) / 2;
+
+    // Show instruction screen first
+    if (minigame3ShowingInstructions) {
+      // Draw instruction image
+      if (instruction3Img.complete && instruction3Img.naturalWidth > 0) {
+        ctx.drawImage(instruction3Img, windowX, windowY, windowWidth, windowHeight);
+      } else {
+        // Fallback if image not loaded
+        ctx.fillStyle = '#1a1a3e';
+        ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
+        ctx.fillStyle = '#00ffff';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('⚡ Cam internship ⚡', windowX + 250, windowY + 200);
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.fillText('Loading instructions...', windowX + 290, windowY + 250);
+      }
+      // Border
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(windowX, windowY, windowWidth, windowHeight);
+      
+      // Press to start text
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(windowX, windowY + windowHeight - 50, windowWidth, 50);
+      ctx.fillStyle = '#00ff00';
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText('Press SPACE or ENTER to start  |  R to close', windowX + 180, windowY + windowHeight - 20);
+      return; // Don't draw game elements while showing instructions
+    }
+
+    // Draw universe background
+    if (shooterBg.complete && shooterBg.naturalWidth > 0) {
+      ctx.drawImage(shooterBg, windowX, windowY, windowWidth, windowHeight);
+    } else {
+      ctx.fillStyle = '#0a0a2e';
+      ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
+    }
+
+    // Border
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(windowX, windowY, windowWidth, windowHeight);
+
+    // Title bar
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(windowX, windowY, windowWidth, 40);
+    ctx.fillStyle = '#00ffff';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('⚡ Cam internship ⚡', windowX + 200, windowY + 27);
+
+    // Game area offset
+    const gameX = windowX;
+    const gameY = windowY + 40;
+    const gameWidth = windowWidth;
+    const gameHeight = windowHeight - 40;
+
+    // Draw targets and hazards
+    for (const target of shooterTargets) {
+      const img = target.type === 'target' ? shooterTarget : shooterHazard;
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, gameX + target.x, gameY + target.y, 40, 40);
+      } else {
+        ctx.fillStyle = target.type === 'target' ? '#ff6600' : '#ff0000';
+        ctx.fillRect(gameX + target.x, gameY + target.y, 40, 40);
+      }
+    }
+
+    // Draw bullets (separate electric projectiles)
+    for (const bullet of shooterBullets) {
+      if (shooterBullet.complete && shooterBullet.naturalWidth > 0) {
+        ctx.drawImage(shooterBullet, gameX + bullet.x - 15, gameY + bullet.y - 10, 50, 60);
+      } else {
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(gameX + bullet.x, gameY + bullet.y, 20, 40);
+      }
+    }
+
+    // Draw player (Pikachu) - positioned at bottom of larger game area
+    if (shooterPlayer.complete && shooterPlayer.naturalWidth > 0) {
+      ctx.drawImage(shooterPlayer, gameX + shooterX, gameY + 460, 70, 70);
+    } else {
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillRect(gameX + shooterX, gameY + 470, 70, 60);
+    }
+
+    // HUD - Score, Goal, Timer
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(windowX + 10, windowY + 50, 150, 70);
+    ctx.fillStyle = '#00ff00';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText('Current score: ' + minigame3Score, windowX + 20, windowY + 72);
+    ctx.fillStyle = '#ffff00';
+    ctx.fillText('KPI: ' + SHOOTER_WIN_SCORE + ' pts', windowX + 20, windowY + 95);
+    ctx.fillStyle = minigame3Timer <= 10 ? '#ff0000' : '#ffffff';
+    ctx.fillText('Time: ' + Math.ceil(minigame3Timer) + 's', windowX + 20, windowY + 118);
+
+    // Instructions at bottom
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(windowX, windowY + windowHeight - 35, windowWidth, 35);
+    ctx.fillStyle = '#aaa';
+    ctx.font = '12px Arial';
+    ctx.fillText('← → to move  |  SPACE to shoot  |  R to close', windowX + 160, windowY + windowHeight - 15);
+
+    // Legend
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(windowX + windowWidth - 160, windowY + 50, 150, 50);
+    ctx.fillStyle = '#ff6600';
+    ctx.font = '12px Arial';
+    ctx.fillText('Target (+10 pts)', windowX + windowWidth - 150, windowY + 68);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillText('Police (instant lose!)', windowX + windowWidth - 150, windowY + 88);
+
+    // Win message
+    if (minigame3Won) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(windowX + 100, windowY + 180, 550, 120);
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(windowX + 100, windowY + 180, 550, 120);
+      ctx.fillStyle = '#00ff00';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('bạn đã đạt đủ KPI ngày', windowX + 200, windowY + 230);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText('Final Score: ' + minigame3Score, windowX + 290, windowY + 260);
+      ctx.font = '14px Arial';
+      ctx.fillText('Press T to play again or R to close', windowX + 230, windowY + 285);
+    }
+
+    // Lose message
+    if (minigame3Lost) {
+      const boxWidth = 550;
+      const boxHeight = 140;
+      const boxX = windowX + (windowWidth - boxWidth) / 2;
+      const boxY = windowY + (windowHeight - boxHeight) / 2;
+      
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+      ctx.fillStyle = '#ff4444';
+      ctx.font = 'bold 24px Arial';
+      
+      // Different messages based on lose reason
+      if (minigame3LoseReason === 'police') {
+        ctx.fillText('bóc lịch :<', boxX + 180, boxY + 40);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#ffaaaa';
+      } else if (minigame3LoseReason === 'timeout') {
+        ctx.fillText('Không đạt đủ KPI :<', boxX + 135, boxY + 40);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#ffaaaa';
+      }
+      
+      ctx.font = '16px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText('Final Score: ' + minigame3Score, boxX + 190, boxY + 100);
+      ctx.font = '14px Arial';
+      ctx.fillText('Press T to try again or R to close', boxX + 130, boxY + 125);
     }
   }
 }
