@@ -634,6 +634,18 @@ document.addEventListener('keydown', e => {
       minigame2Open = false;
       minigame2Started = false;
     }
+    // Also allow E to close minigame 1
+    else if (minigameOpen) {
+      minigameOpen = false;
+      minigameStarted = false;
+    }
+    // Also allow E to close minigame 3
+    else if (minigame3Open) {
+      minigame3Open = false;
+      minigame3Started = false;
+      minigame3ShowingInstructions = true;
+      shooterKeys = { left: false, right: false };
+    }
   }
 
   // Mini-game 1 (Assignment shortcuts) - Q key from combined checkpoint
@@ -692,18 +704,12 @@ document.addEventListener('keydown', e => {
     }
   }
 
-  // Third mini-game trigger: Press R near combined checkpoint
+  // Third mini-game trigger: Press R near combined checkpoint (only opens, E closes)
   if (interactionKey === 'r') {
     if (nearMiniGameCheckpoint && !minigame3Open && !minigameOpen && !minigame2Open) {
       minigame3Open = true;
       minigame3ShowingInstructions = true; // Show instructions first
       minigame3Started = false;
-    } else if (minigame3Open) {
-      // Close shooter game with R
-      minigame3Open = false;
-      minigame3Started = false;
-      minigame3ShowingInstructions = true;
-      shooterKeys = { left: false, right: false };
     }
   }
 
@@ -896,6 +902,15 @@ function triggerDiscoEffects() {
 // Game draw logic
 function draw() {
   ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+  // Draw "MINIGAME" label at checkpoint location
+  ctx.fillStyle = '#cc0000';
+  ctx.fillRect(miniGameCheckpoint.x - 45, miniGameCheckpoint.y + 15, 90, 22);
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 16px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('MINIGAME', miniGameCheckpoint.x, miniGameCheckpoint.y + 32);
+  ctx.textAlign = 'left'; // Reset alignment
 
   // choose correct image: walking frames when moving, otherwise idle `char`
   const framesToUse = lastDirection === 'left' ? walkLeftFrames : walkRightFrames;
@@ -1319,7 +1334,7 @@ function draw() {
       ctx.fillRect(windowX, windowY + windowHeight - 50, windowWidth, 50);
       ctx.fillStyle = '#00ff00';
       ctx.font = 'bold 18px Arial';
-      ctx.fillText('Press SPACE or ENTER to start  |  R to close', windowX + 180, windowY + windowHeight - 20);
+      ctx.fillText('Press SPACE or ENTER to start  |  E to close', windowX + 180, windowY + windowHeight - 20);
       return; // Don't draw game elements while showing instructions
     }
 
@@ -1394,7 +1409,7 @@ function draw() {
     ctx.fillRect(windowX, windowY + windowHeight - 35, windowWidth, 35);
     ctx.fillStyle = '#aaa';
     ctx.font = '12px Arial';
-    ctx.fillText('← → to move  |  SPACE to shoot  |  R to close', windowX + 160, windowY + windowHeight - 15);
+    ctx.fillText('← → to move  |  SPACE to shoot  |  E to close', windowX + 160, windowY + windowHeight - 15);
 
     // Legend
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -1419,7 +1434,7 @@ function draw() {
       ctx.fillStyle = 'white';
       ctx.fillText('Final Score: ' + minigame3Score, windowX + 290, windowY + 260);
       ctx.font = '14px Arial';
-      ctx.fillText('Press T to play again or R to close', windowX + 230, windowY + 285);
+      ctx.fillText('Press T to try again or E to close', windowX + 230, windowY + 285);
     }
 
     // Lose message
@@ -1452,7 +1467,7 @@ function draw() {
       ctx.fillStyle = 'white';
       ctx.fillText('Final Score: ' + minigame3Score, boxX + 190, boxY + 100);
       ctx.font = '14px Arial';
-      ctx.fillText('Press T to try again or R to close', boxX + 130, boxY + 125);
+      ctx.fillText('Press T to try again or E to close', boxX + 130, boxY + 125);
     }
   }
 }
