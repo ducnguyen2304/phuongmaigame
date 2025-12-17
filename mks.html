@@ -5,6 +5,9 @@
   <title>game phuong mai</title>
   <script data-goatcounter="https://ducnguyen.goatcounter.com/count"
           async src="//gc.zgo.at/count.js"></script>
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P4CZVM52PK"></script>
+  <script src="js/ga4.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background:#000; opacity:0; transition:opacity 1s; overflow:hidden; }
@@ -124,6 +127,62 @@
       border: 2px solid rgba(255,255,255,0.25);
       cursor: pointer;
     }
+
+    /* =========================================
+       🧽 TABLE WIPE GAME
+       ========================================= */
+    .wipe-game-container{
+      position: relative;
+      width: 600px;
+      height: 400px;
+      background: #8B4513;
+      border-radius: 12px;
+      border: 8px solid #5D330E;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+      overflow: hidden;
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="white" d="M4 4h16v16H4z"/></svg>'), auto;
+    }
+
+    .dirt-spot{
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle, #553311 20%, transparent 70%);
+      border-radius: 50%;
+      cursor: pointer;
+      opacity: 0.9;
+      transform: scale(0);
+      animation: popIn 0.3s forwards;
+    }
+
+    @keyframes popIn { to { transform: scale(1); } }
+
+    .wipe-hud{
+      position: absolute;
+      top: 10px; left: 10px; right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .win-overlay{
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #3f7;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
     /* =========================================
        COLORING GAME STYLES (PHASE 2)
@@ -293,6 +352,7 @@
     Near Hearty Plant: <b>H</b> (inspect)<br>
     Near TV: <b>V</b> (watch TV)<br>
     Near Electronics Table: <b>M</b> (wiring map)<br>
+    Near Chu Thái: <b>K</b> (bonus scenes)<br>
     <span style="opacity:.85">ESC closes overlay/scene</span>
   </div>
 
@@ -454,7 +514,7 @@
       }
     });
 
-    // --- Scenes
+    // --- Scenes (TA / Crowd scenes: 1-7)
     const scenes = [
       { text: "...", img: "scenes/scene1.png" },
       { text: "...", img: "scenes/scene2.png" },
@@ -465,6 +525,14 @@
       { text: "...", img: "scenes/scene7.png" }
     ];
     let currentSceneIndex = 0;
+
+    // Chu Thái scenes: 8-10 (trigger by K)
+    const CHUTHAI_SCENES = [
+      { text: "...", img: "scenes/scene8.png" },
+      { text: "...", img: "scenes/scene9.png" },
+      { text: "...", img: "scenes/scene10.png" }
+    ];
+    let chuThaiIndex = 0;
 
     function openOrAdvanceScene() {
       // 1. Play sound logic (stops BG momentarily to focus on crowd noise)
@@ -551,7 +619,7 @@
       Nick_Judy_Table: { x: 920, y: 550, w: 136, h: 99 },
       Left_Table: { x: 660, y: 200, w: 135, h: 445 },
       TV: { x: 890, y: 750, w: 193, h: 100 },
-      Chu_Thai: { x: 1018, y: 564, w: 154, h: 100 },
+      Chu_Thai: { x: 1120, y: 605, w: 154, h: 100 },
       DST_Box: { x: 500, y: 500, w: 79, h: 380 },
       Sewing_Machine: { x: 466, y: 721, w: 93, h: 51 },
       Electronics_Table: { x: 620, y: 870, w: 540, h: 95 },
@@ -605,6 +673,166 @@
       }
     }
 
+    function closeScenePanel() {
+      scenePanel.style.display = "none";
+    }
+
+    // ============================================================
+    // Chu Thái SCENES
+    // ============================================================
+    function openChuThaiScenes() {
+      startBGIfNeeded();
+
+      openOverlay("Chu Thái — Bonus Scenes", () => {
+        const render = () => {
+          const scene = CHUTHAI_SCENES[chuThaiIndex];
+
+          overlayBody.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; width:100%; text-align:center;">
+              <div style="flex:1; display:flex; align-items:center; justify-content:center; width:100%; overflow:hidden; min-height:0;">
+                <img src="${scene.img}"
+                  style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 0 25px rgba(0,0,0,0.6);"
+                  onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color:#666\\'>Image missing: ${scene.img}</div>'"
+                />
+              </div>
+
+              <div style="margin-top:20px; width:100%; max-width:900px;">
+                <div style="font-size:20px; line-height:1.5; color:#fff; margin-bottom:18px; text-shadow:0 2px 4px rgba(0,0,0,0.8); background:rgba(0,0,0,0.4); padding:14px; border-radius:12px;">
+                  ${scene.text || "..."}
+                </div>
+
+                <div class="row" style="justify-content:center; gap:20px;">
+                  <div style="font-size:14px; opacity:0.6; align-self:center;">
+                    Scene ${chuThaiIndex + 1} / ${CHUTHAI_SCENES.length}
+                  </div>
+
+                  <button class="btn" id="btnNextChuThai" style="background:#33ff77; color:#000; font-size:16px; padding:12px 26px; border:2px solid #fff;">
+                    Next 
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          overlayBody.querySelector("#btnNextChuThai").onclick = () => {
+            chuThaiIndex = (chuThaiIndex + 1) % CHUTHAI_SCENES.length;
+            render();
+          };
+        };
+
+        render();
+      });
+    }
+
+    // ============================================================
+    // TABLE WIPE RUSH GAME
+    // ============================================================
+    function openTableWipeGame() {
+      openOverlay("Table Wipe Rush", () => {
+        overlayBody.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; height:100%; gap:10px;">
+            <div style="text-align:center; opacity:0.9;">
+              Clean 10 dirt spots in 15 seconds!<br>
+              <small>Click directly on the spots to wipe them.</small>
+            </div>
+            <div class="wipe-game-container" id="wipeGame">
+              <div class="wipe-hud">
+                <span id="wipeTimer">Time: 15.0</span>
+                <span id="wipeScore">Cleaned: 0/10</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const container = document.getElementById('wipeGame');
+        const timerEl = document.getElementById('wipeTimer');
+        const scoreEl = document.getElementById('wipeScore');
+
+        let score = 0;
+        let timeLeft = 15.0;
+        let gameActive = true;
+        let spawnInterval;
+        let timerInterval;
+
+        const spawnSpot = () => {
+          if (!gameActive) return;
+          const spot = document.createElement('div');
+          spot.className = 'dirt-spot';
+
+          const x = Math.random() * 560;
+          const y = Math.random() * 360;
+          spot.style.left = x + 'px';
+          spot.style.top = y + 'px';
+
+          spot.onmousedown = (e) => {
+            e.stopPropagation();
+            if (!gameActive) return;
+            score++;
+            scoreEl.textContent = `Cleaned: ${score}/10`;
+            spot.remove();
+            if (score >= 10) winGame();
+          };
+
+          container.appendChild(spot);
+          setTimeout(() => { if (spot.parentElement) spot.remove(); }, 2000 + Math.random() * 1000);
+        };
+
+        const winGame = () => {
+          gameActive = false;
+          clearInterval(spawnInterval);
+          clearInterval(timerInterval);
+          trackMinigame('Table_Wipe_Rush', 'completed');
+          container.innerHTML += `
+            <div class="win-overlay">
+              <div>Operational efficiency unlocked 😭</div>
+              <div style="font-size:16px; margin-top:10px; color:#fff;">Great job cleaning!</div>
+              <button class="btn" id="btnRetryWipe" style="margin-top:16px; background:#fff; color:#000; font-weight:bold;">Retry</button>
+            </div>
+          `;
+          const b = container.querySelector("#btnRetryWipe");
+          if (b) b.onclick = (e) => { e.stopPropagation(); openTableWipeGame(); };
+        };
+
+        const loseGame = () => {
+          gameActive = false;
+          clearInterval(spawnInterval);
+          clearInterval(timerInterval);
+          trackMinigame('Table_Wipe_Rush', 'failed');
+          container.innerHTML += `
+            <div class="win-overlay" style="color:#ff5555;">
+              <div>Time's Up!</div>
+              <div style="font-size:16px; margin-top:10px; color:#fff;">Please try again.</div>
+              <button class="btn" id="btnRetryWipe" style="margin-top:16px; background:#fff; color:#000; font-weight:bold;">🔄 Retry</button>
+            </div>
+          `;
+          const b = container.querySelector("#btnRetryWipe");
+          if (b) b.onclick = (e) => { e.stopPropagation(); openTableWipeGame(); };
+        };
+
+        spawnInterval = setInterval(spawnSpot, 600);
+        timerInterval = setInterval(() => {
+          if (!gameActive) return;
+          timeLeft -= 0.1;
+          timerEl.textContent = `Time: ${Math.max(0, timeLeft).toFixed(1)}`;
+          if (timeLeft <= 0) {
+            if (score >= 10) winGame();
+            else loseGame();
+          }
+        }, 100);
+
+        spawnSpot();
+        spawnSpot();
+
+        const safeCheck = setInterval(() => {
+          if (!document.getElementById('wipeGame')) {
+            clearInterval(spawnInterval);
+            clearInterval(timerInterval);
+            clearInterval(safeCheck);
+          }
+        }, 500);
+      });
+    }
+
     // BIG PDF VIEWER for Hearty Plant
     function openHeartyPDF() {
       if (window.goatcounter) {
@@ -653,6 +881,7 @@
         `;
 
         overlayBody.querySelector("#openPdfNewTab").onclick = () => {
+          trackDocument('Hearty_Plant_PDF', 'opened_new_tab');
           if (window.goatcounter) {
             window.goatcounter.count({ path: '/hearty-pdf-new-tab', event: true });
           }
@@ -672,6 +901,7 @@
           key: "l",
           prompt: "Press L so that they kiss",
           onTrigger: () => {
+            trackCheckpoint('Nick_Judy_Table', 'triggered');
             startBGIfNeeded();
             pauseBGfor(zootopiaSound);
             zootopiaSound.currentTime = 0;
@@ -684,7 +914,10 @@
           triggerDistance: 170,
           key: "h",
           prompt: "Press H water the plant",
-          onTrigger: () => openHeartyPDF()
+          onTrigger: () => {
+            trackDocument('Hearty_Plant_PDF', 'opened');
+            openHeartyPDF();
+          }
         },
 
         {
@@ -694,6 +927,7 @@
           key: "v",
           prompt: "Press V to turn on the TV",
           onTrigger: () => {
+            trackCheckpoint('TV', 'opened');
             if (window.goatcounter) {
               window.goatcounter.count({ path: '/tv-poster-viewed', event: true });
             }
@@ -713,14 +947,37 @@
                   <a href="https://forms.cloud.microsoft/pages/responsepage.aspx?id=X0Jj7nKvWEqC5-RRzJJkahRskQWUBXxLudq9d-N7x49UN0NZVlNBWUhPWjBEVU1MWjVTNUtKV1QyQi4u&origin=QRCode&qrcodeorigin=presentation&route=shorturl" 
                      target="_blank" 
                      class="btn" 
-                     style="text-decoration:none; background:#33aaff; color:#000; padding:12px 24px; font-size:15px; font-weight:bold; display:inline-block;">
+                     style="text-decoration:none; background:#33aaff; color:#000; padding:12px 24px; font-size:15px; font-weight:bold; display:inline-block;"
+                     onclick="trackNewsletter('Innovation_Bootcamp', 'register_clicked')">
                      👉 Register Now
                   </a>
+
+                  <button id="btnWipeChallenge" class="btn" style="background:#ff9900; color:#000; padding:12px 24px; font-size:15px; font-weight:bold;">
+                    🏆 Play Challenge
+                  </button>
                   
                   <div class="hint">Press ESC to close</div>
                 </div>
               `;
+
+              const btnVal = overlayBody.querySelector("#btnWipeChallenge");
+              if (btnVal) btnVal.onclick = () => {
+                trackMinigame('Table_Wipe_Rush', 'started');
+                openTableWipeGame();
+              };
             });
+          }
+        },
+
+        {
+          name: "Chu Thai",
+          rect: Z.Chu_Thai,
+          triggerDistance: 200,
+          key: "k",
+          prompt: "Press K to ask chú Thái for help",
+          onTrigger: () => {
+            trackCheckpoint('Chu_Thai', 'opened');
+            openChuThaiScenes();
           }
         },
 
@@ -730,7 +987,10 @@
           triggerDistance: 260,
           key: "m",
           prompt: "Press M or everything explodes",
-          onTrigger: () => openWiringMap()
+          onTrigger: () => {
+            trackMinigame('Color_Wiring_Map', 'started');
+            openWiringMap();
+          }
         },
         {
           name: "Water Table",
@@ -738,7 +998,10 @@
           triggerDistance: 220,
           key: "i",
           prompt: "Press I to pass Sink or Swim!",
-          onTrigger: () => openBoardRace()
+          onTrigger: () => {
+            trackMinigame('Sink_or_Swim', 'started');
+            openBoardRace();
+          }
         },
         {
           name: "DST Box",
@@ -746,7 +1009,10 @@
           triggerDistance: 220,
           key: "c",
           prompt: "Press C to do assignment!",
-          onTrigger: () => openPuzzle()
+          onTrigger: () => {
+            trackMinigame('DST_Puzzle', 'started');
+            openPuzzle();
+          }
         },
         {
           name: "3D Print Table",
@@ -754,7 +1020,10 @@
           triggerDistance: 240,
           key: "p",
           prompt: "Press P find SD card!",
-          onTrigger: () => openFindSD()
+          onTrigger: () => {
+            trackMinigame('Find_SD_Card', 'started');
+            openFindSD();
+          }
         },
         {
           name: "TA",
@@ -762,7 +1031,10 @@
           triggerDistance: 220,
           key: "t",
           prompt: "Press T to see the tea!",
-          onTrigger: () => openOrAdvanceScene()
+          onTrigger: () => {
+            trackScene('TA_Drama', 1, 7);
+            openOrAdvanceScene();
+          }
         }
       ];
     }
@@ -905,7 +1177,7 @@
           if (state.x < 20) { state.x = 20; state.vx = 0; }
           if (state.x > cvs.width - 20) { state.x = cvs.width - 20; state.vx = 0; }
 
-          // Boost & Scroll Speed
+          // Boost and Scroll Speed
           let currentSpeed = state.speed;
           if (keys.space) {
               currentSpeed += 3; // Boost speed
@@ -1024,6 +1296,7 @@
           ctx.textAlign = "center";
           
           if (win) {
+             trackMinigame('Sink_or_Swim', 'completed', { score: Math.floor(state.score) });
              ctx.font = "bold 40px Arial";
              ctx.fillStyle = "#44ff88";
              ctx.fillText("COURSE COMPLETE!", cvs.width/2, cvs.height/2 - 20);
@@ -1031,6 +1304,7 @@
              ctx.fillStyle = "#fff";
              ctx.fillText("SWIMMMMM!", cvs.width/2, cvs.height/2 + 20);
           } else {
+             trackMinigame('Sink_or_Swim', 'failed', { score: Math.floor(state.score) });
              ctx.font = "bold 40px Arial";
              ctx.fillStyle = "#ff4444";
              ctx.fillText("CRASHED! SINKING", cvs.width/2, cvs.height/2 - 20);
@@ -1198,9 +1472,10 @@
         }
 
         function showWin() {
+          trackMinigame('DST_Puzzle', 'completed');
           overlayBody.innerHTML = `
              <div class="win-screen">
-                <div style="font-size:24px; color:#33ff77; margin-bottom:10px;">✨ PRINTED!</div>
+                <div style="font-size:24px; color:#33ff77; margin-bottom:10px;">PRINTED!</div>
                 <div class="hint" style="margin-bottom:20px;">Your custom toolbox is ready.</div>
                 
                 <img src="${RESULT_SRC}" style="width:500px; max-width:100%; border-radius:12px; box-shadow:0 0 20px rgba(255,255,255,0.2);" />
@@ -1369,6 +1644,7 @@
         }
 
         function gameWon() {
+           trackMinigame('Find_SD_Card', 'completed', { flips: flips });
            grid.innerHTML = `
              <div style="grid-column: 1 / -1; text-align:center; padding: 20px;">
                 <div style="font-size: 50px; margin-bottom:8px;">💾✨</div>
@@ -1522,7 +1798,11 @@
             if (hitWire(p, w)) {
               w.paint = selected;
               drawBoard();
-              statusEl.innerHTML = checkWin()
+              const won = checkWin();
+              if (won) {
+                trackMinigame('Color_Wiring_Map', 'completed');
+              }
+              statusEl.innerHTML = won
                 ? "<b>Perfect wiring!</b> You matched the whole map. Press ESC to close."
                 : "Painted! Keep going…";
               return;
