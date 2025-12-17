@@ -1,12 +1,35 @@
 // Google Analytics 4 Tracking for Phuong Mai Game
 // GA4 Measurement ID: G-P4CZVM52PK
-// Purpose: Track user interactions 
+// Purpose: Track user interactions for decision tree analysis
 
 // Initialize dataLayer
 window.dataLayer = window.dataLayer || [];
 function gtag() { dataLayer.push(arguments); }
 gtag('js', new Date());
 gtag('config', 'G-P4CZVM52PK');
+
+// ============================================================
+// Track Return Visitors
+// ============================================================
+(function() {
+  const visitKey = 'phuongmai_visited';
+  const hasVisitedBefore = localStorage.getItem(visitKey);
+  
+  if (hasVisitedBefore) {
+    // This is a returning user
+    gtag('event', 'user_returned', {
+      'event_category': 'engagement',
+      'event_label': 'returning_user'
+    });
+  } else {
+    // First time visitor
+    gtag('event', 'user_first_visit', {
+      'event_category': 'engagement', 
+      'event_label': 'new_user'
+    });
+    localStorage.setItem(visitKey, 'true');
+  }
+})();
 
 // ============================================================
 // Simple Event Tracking for Decision Tree
