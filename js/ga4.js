@@ -9,18 +9,23 @@ gtag('js', new Date());
 gtag('config', 'G-P4CZVM52PK');
 
 // ============================================================
-// Track Return Visitors
+// Track Return Visitors (fires only ONCE per user, ever)
 // ============================================================
 (function() {
   const visitKey = 'phuongmai_visited';
+  const returnTrackedKey = 'phuongmai_return_tracked';
   const hasVisitedBefore = localStorage.getItem(visitKey);
+  const returnAlreadyTracked = localStorage.getItem(returnTrackedKey);
   
   if (hasVisitedBefore) {
-    // This is a returning user
-    gtag('event', 'user_returned', {
-      'event_category': 'engagement',
-      'event_label': 'returning_user'
-    });
+    // This is a returning user - only fire event ONCE
+    if (!returnAlreadyTracked) {
+      gtag('event', 'user_returned', {
+        'event_category': 'engagement',
+        'event_label': 'returning_user'
+      });
+      localStorage.setItem(returnTrackedKey, 'true');
+    }
   } else {
     // First time visitor
     gtag('event', 'user_first_visit', {
