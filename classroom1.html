@@ -4,6 +4,9 @@
 <title>game phuong mai</title>
 <script data-goatcounter="https://ducnguyen.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-P4CZVM52PK"></script>
+<script src="js/ga4.js"></script>
 <style>
 * { margin: 0; padding: 0; overflow: hidden; }
 body { background: #000; opacity: 0; transition: opacity 1s; }
@@ -287,9 +290,11 @@ function updateShooterGame(dt) {
     // Check if player reached the goal
     if (minigame3Score >= SHOOTER_WIN_SCORE) {
       minigame3Won = true;
+      trackMinigame('Cam_Internship_Shooter', 'completed', { score: minigame3Score });
     } else {
       minigame3Lost = true;
       minigame3LoseReason = 'timeout'; // Time's up and didn't reach goal
+      trackMinigame('Cam_Internship_Shooter', 'failed', { reason: 'timeout', score: minigame3Score });
     }
     return;
   }
@@ -364,11 +369,13 @@ function updateShooterGame(dt) {
           // Check win condition immediately
           if (minigame3Score >= SHOOTER_WIN_SCORE) {
             minigame3Won = true;
+            trackMinigame('Cam_Internship_Shooter', 'completed', { score: minigame3Score });
           }
         } else {
           // Hit police - IMMEDIATE LOSS
           minigame3Lost = true;
           minigame3LoseReason = 'police';
+          trackMinigame('Cam_Internship_Shooter', 'failed', { reason: 'police', score: minigame3Score });
         }
         shooterBullets.splice(b, 1);
         shooterTargets.splice(t, 1);
@@ -638,6 +645,7 @@ document.addEventListener('keydown', e => {
     // Mini-game 2 (Kera Candy Balance) - from combined checkpoint
     if (nearMiniGameCheckpoint && !minigame2Open && !minigameOpen && !minigame3Open) {
       minigame2Open = true;
+      trackMinigame('Kera_Candy_Balance', 'started');
       initMiniGame2();
     } else if (minigame2Open) {
       minigame2Open = false;
@@ -661,6 +669,7 @@ document.addEventListener('keydown', e => {
   if (interactionKey === 'q') {
     if (nearMiniGameCheckpoint && !minigameOpen && !minigame2Open && !minigame3Open) {
       minigameOpen = true;
+      trackMinigame('Keyboard_Shortcuts', 'started');
       initMiniGame();
     } else if (minigameOpen) {
       minigameOpen = false;
@@ -691,10 +700,12 @@ document.addEventListener('keydown', e => {
         // Check if player completed the sequence
         if (playerInput.length === minigameSequence.length) {
           minigameWon = true;
+          trackMinigame('Keyboard_Shortcuts', 'completed');
         }
       } else {
         // Wrong shortcut - lose
         minigameLost = true;
+        trackMinigame('Keyboard_Shortcuts', 'failed');
       }
     }
   }
@@ -707,8 +718,10 @@ document.addEventListener('keydown', e => {
       // Check if within safe zone
       if (stabBarX >= stabSafeZoneStart && stabBarX <= stabSafeZoneEnd) {
         minigame2Won = true;
+        trackMinigame('Kera_Candy_Balance', 'completed');
       } else {
         minigame2Lost = true;
+        trackMinigame('Kera_Candy_Balance', 'failed');
       }
     }
   }
@@ -719,6 +732,7 @@ document.addEventListener('keydown', e => {
       minigame3Open = true;
       minigame3ShowingInstructions = true; // Show instructions first
       minigame3Started = false;
+      trackMinigame('Cam_Internship_Shooter', 'started');
     }
   }
 
