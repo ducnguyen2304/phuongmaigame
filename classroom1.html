@@ -244,6 +244,8 @@ const shooterTarget = new Image();
 shooterTarget.src = 'asset/dan.png';
 const shooterHazard = new Image();
 shooterHazard.src = 'asset/police.png';
+const electricHitSound = new Audio('sound/electric.mp3');
+electricHitSound.volume = 0.3;
 
 // Shooter game state
 let shooterX = 0; // player X position
@@ -352,6 +354,13 @@ function updateShooterGame(dt) {
         // Hit!
         if (shooterTargets[t].type === 'target') {
           minigame3Score += 10;
+          // Play electric hit sound (cut short after 300ms)
+          electricHitSound.currentTime = 0;
+          electricHitSound.play().catch(() => {});
+          setTimeout(() => {
+            electricHitSound.pause();
+            electricHitSound.currentTime = 0;
+          }, 300);
           // Check win condition immediately
           if (minigame3Score >= SHOOTER_WIN_SCORE) {
             minigame3Won = true;
