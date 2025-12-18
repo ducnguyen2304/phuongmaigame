@@ -88,8 +88,8 @@ walk4.src = 'character/char4.png';
 walk5.src = 'character/char5.png';
 walk6.src = 'character/char6.png';
 
-// Player and input 
-const player = { x: 700, y: 600, w: 100, h: 150, speed: 6 };
+// Player and input - Y position is responsive to screen height
+const player = { x: 700, y: Math.min(600, window.innerHeight * 0.55), w: 100, h: 150, speed: 6 };
 // Animation state for walking frames
 let animIndex = 0;
 let animTimer = 0; // ms
