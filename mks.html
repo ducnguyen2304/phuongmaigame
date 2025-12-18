@@ -457,8 +457,8 @@
     const MAP_W = 1536;
     const MAP_H = 1024;
 
-    // --- Player
-    const player = { x: 200, y: 600, w: 45, h: 70, speed: 5 };
+    // --- Player - Y position is responsive to screen height
+    const player = { x: 200, y: Math.min(600, window.innerHeight * 0.55), w: 45, h: 70, speed: 5 };
     const keys = {};
 
     // Animation state for walking frames
