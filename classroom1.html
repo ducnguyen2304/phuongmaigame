@@ -1053,14 +1053,14 @@ function draw() {
   // Draw mini-game prompt when near combined checkpoint
   if (nearMiniGameCheckpoint) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(player.x - 60, player.y - 75, 260, 65);
+    ctx.fillRect(player.x - 60, player.y - 75, 285, 65);
     ctx.fillStyle = '#ffff00';
     ctx.font = '14px Arial';
     ctx.fillText('Press Q to play keyboard challenge', player.x - 50, player.y - 57);
     ctx.fillStyle = 'white';
-    ctx.fillText('Press E to play Kera Candy Balance', player.x - 50, player.y - 37);
+    ctx.fillText('Press E to play Kera Candy Balance (NEW)', player.x - 50, player.y - 37);
     ctx.fillStyle = '#00ffff';
-    ctx.fillText('Press R to play Cam Internship', player.x - 50, player.y - 17);
+    ctx.fillText('Press R to play Cam Internship (NEW)', player.x - 50, player.y - 17);
   }
 
   // Draw mini-game modal window when open
